@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>AoE2 Feudal Timer</title>
+  <style>
+    :root {
+      --bg:        #0f0f0f;
+      --surface:   #1a1a1a;
+      --surface2:  #242424;
+      --border:    #333;
+      --accent:    #c89648;
+      --accent-dim:#8a6530;
+      --text:      #e8e8e8;
+      --text-dim:  #888;
+      --error:     #e05c5c;
+      --success:   #5ce07a;
+      --radius:    12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      min-height: 100dvh;
+      padding-bottom: 40px;
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    header {
+      padding: 36px 0 28px;
+      text-align: center;
+    }
+    header h1 {
+      font-size: clamp(22px, 5vw, 30px);
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    header p {
+      margin-top: 6px;
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+
+    /* ── Cards / sections ───────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+    }
+
+    /* ── Inputs ─────────────────────────────── */
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 16px; /* prevents iOS auto-zoom */
+      padding: 13px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"].shake { animation: shake 0.35s ease; border-color: var(--error); }
+
+    input[type="file"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 15px;
+      padding: 14px;
+      cursor: pointer;
+      -webkit-appearance: none;
+    }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* ── Buttons ─────────────────────────────── */
+    button {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #0f0f0f;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      min-height: 48px;
+      padding: 0 22px;
+      touch-action: manipulation;
+      transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:active { opacity: 0.8; }
+    button:disabled { background: var(--accent-dim); cursor: not-allowed; opacity: 0.6; }
+
+    .btn-secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 500;
+      width: 100%;
+      margin-top: 12px;
+    }
+    .btn-secondary:active { background: var(--border); }
+
+    /* ── Upload collapsible ─────────────────── */
+    details { border-radius: var(--radius); }
+    details > summary {
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-dim);
+      padding: 4px 0;
+      list-style: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    details > summary::before { content: '▶  '; font-size: 10px; }
+    details[open] > summary::before { content: '▼  '; }
+    details > summary::-webkit-details-marker { display: none; }
+
+    .upload-inner {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .upload-inner button { width: 100%; }
+
+    /* ── Loading ─────────────────────────────── */
+    #loading-section {
+      text-align: center;
+      padding: 40px 0;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 18px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    #loading-text {
+      color: var(--text-dim);
+      font-size: 15px;
+    }
+
+    /* ── Error ───────────────────────────────── */
+    #error-section {
+      background: color-mix(in srgb, var(--error) 12%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      margin-bottom: 16px;
+    }
+
+    #error-message {
+      color: var(--error);
+      font-size: 15px;
+      margin-bottom: 14px;
+    }
+
+    /* ── Info banner ─────────────────────────── */
+    .info-banner {
+      background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+      border: 1px solid var(--accent-dim);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+
+    /* ── Results ─────────────────────────────── */
+    #results-section h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .player-cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 420px) {
+      .player-cards-grid { grid-template-columns: 1fr; }
+    }
+
+    .player-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      position: relative;
+    }
+    .player-card.fastest { border-color: var(--accent); }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+    .badge-gold {
+      background: color-mix(in srgb, var(--accent) 20%, transparent);
+      color: var(--accent);
+      border: 1px solid var(--accent-dim);
+    }
+    .badge-dim {
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .player-card-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .player-card-civ {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+
+    .feudal-block { margin-top: auto; }
+
+    .feudal-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .feudal-value {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      font-variant-numeric: tabular-nums;
+    }
+    .feudal-value.has-time { color: var(--accent); }
+    .feudal-value.no-time  { color: var(--text-dim); font-size: 18px; }
+
+    .result-meta {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    /* ── Utilities ───────────────────────────── */
+    .hidden { display: none !important; }
+
+    @keyframes spin  { to { transform: rotate(360deg); } }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>AoE2 Feudal Timer</h1>
+    <p>Analyze when each player clicked Feudal Age</p>
+  </header>
+
+  <!-- Search by username -->
+  <div class="card" id="search-section">
+    <h2>Search by player name</h2>
+    <form id="search-form" autocomplete="off">
+      <label for="username-input">aoe2.net username</label>
+      <div class="input-row">
+        <input id="username-input" type="text" placeholder="e.g. TheViper"
+               autocapitalize="none" autocorrect="off" spellcheck="false">
+        <button type="submit" id="search-btn">Fetch &amp; Analyze</button>
+      </div>
+      <p class="hint">Fetches most recent 1v1 match · replay URL may not always be available</p>
+    </form>
+  </div>
+
+  <!-- Upload replay file -->
+  <div class="card" id="upload-section">
+    <details id="upload-details">
+      <summary>Upload replay file directly</summary>
+      <div class="upload-inner">
+        <div id="upload-banner" class="info-banner hidden"></div>
+        <div>
+          <label for="file-input">Select .aoe2record or .zip file</label>
+          <input id="file-input" type="file" accept=".aoe2record,.zip">
+        </div>
+        <button type="button" id="upload-btn">Analyze File</button>
+      </div>
+    </details>
+  </div>
+
+  <!-- Loading state -->
+  <div id="loading-section" class="hidden">
+    <div class="spinner"></div>
+    <p id="loading-text">Working…</p>
+  </div>
+
+  <!-- Error state -->
+  <div id="error-section" class="hidden">
+    <p id="error-message"></p>
+    <button class="btn-secondary" id="error-back-btn">← Try Again</button>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section" class="hidden">
+    <h2>Results</h2>
+    <div class="player-cards-grid" id="player-cards"></div>
+    <p class="result-meta" id="result-meta"></p>
+    <button class="btn-secondary" id="again-btn">← Analyze Another</button>
+  </div>
+
+</div>
+
+<script>
+  const CIVS = {
+    1:'Britons',2:'Franks',3:'Goths',4:'Teutons',5:'Japanese',
+    6:'Chinese',7:'Byzantines',8:'Persians',9:'Saracens',10:'Turks',
+    11:'Vikings',12:'Mongols',13:'Celts',14:'Spanish',15:'Aztecs',
+    16:'Mayans',17:'Huns',18:'Koreans',19:'Italians',20:'Hindustanis',
+    21:'Incas',22:'Magyars',23:'Slavs',24:'Portuguese',25:'Ethiopians',
+    26:'Malians',27:'Berbers',28:'Khmer',29:'Malay',30:'Burmese',
+    31:'Vietnamese',32:'Bulgarians',33:'Tatars',34:'Cumans',
+    35:'Lithuanians',36:'Burgundians',37:'Sicilians',38:'Poles',
+    39:'Bohemians',40:'Dravidians',41:'Bengalis',42:'Gurjaras',
+    43:'Romans',44:'Armenians',45:'Georgians',
+  };
+
+  const LOADING_MSGS = [
+    'Fetching match data…',
+    'Downloading replay…',
+    'Parsing replay file…',
+    'Calculating Feudal times…',
+  ];
+
+  // ── DOM refs ──────────────────────────────────────────
+  const searchSection  = document.getElementById('search-section');
+  const uploadSection  = document.getElementById('upload-section');
+  const loadingSection = document.getElementById('loading-section');
+  const errorSection   = document.getElementById('error-section');
+  const resultsSection = document.getElementById('results-section');
+
+  const usernameInput = document.getElementById('username-input');
+  const searchBtn     = document.getElementById('search-btn');
+  const fileInput     = document.getElementById('file-input');
+  const uploadBtn     = document.getElementById('upload-btn');
+  const uploadDetails = document.getElementById('upload-details');
+  const uploadBanner  = document.getElementById('upload-banner');
+  const loadingText   = document.getElementById('loading-text');
+  const errorMessage  = document.getElementById('error-message');
+  const playerCards   = document.getElementById('player-cards');
+  const resultMeta    = document.getElementById('result-meta');
+
+  document.getElementById('error-back-btn').addEventListener('click', showHome);
+  document.getElementById('again-btn').addEventListener('click', showHome);
+  document.getElementById('search-form').addEventListener('submit', handleSearch);
+  uploadBtn.addEventListener('click', handleUpload);
+
+  // ── UI helpers ────────────────────────────────────────
+  function hideAll() {
+    [searchSection, uploadSection, loadingSection, errorSection, resultsSection]
+      .forEach(el => el.classList.add('hidden'));
+  }
+
+  function showHome() {
+    hideAll();
+    searchSection.classList.remove('hidden');
+    uploadSection.classList.remove('hidden');
+    uploadBanner.classList.add('hidden');
+    uploadDetails.removeAttribute('open');
+  }
+
+  let _loadInterval = null;
+  function startLoading() {
+    hideAll();
+    loadingSection.classList.remove('hidden');
+    let i = 0;
+    loadingText.textContent = LOADING_MSGS[0];
+    _loadInterval = setInterval(() => {
+      i = (i + 1) % LOADING_MSGS.length;
+      loadingText.textContent = LOADING_MSGS[i];
+    }, 1600);
+    searchBtn.disabled = true;
+    uploadBtn.disabled = true;
+  }
+
+  function stopLoading() {
+    clearInterval(_loadInterval);
+    searchBtn.disabled = false;
+    uploadBtn.disabled = false;
+  }
+
+  function showError(msg) {
+    stopLoading();
+    hideAll();
+    errorMessage.textContent = msg;
+    errorSection.classList.remove('hidden');
+  }
+
+  // ── Handlers ──────────────────────────────────────────
+  async function handleSearch(e) {
+    e.preventDefault();
+    const username = usernameInput.value.trim();
+    if (!username) {
+      usernameInput.classList.add('shake');
+      usernameInput.addEventListener('animationend', () => usernameInput.classList.remove('shake'), {once:true});
+      return;
+    }
+
+    startLoading();
+
+    let data;
+    try {
+      const resp = await fetch('/api/search', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username}),
+      });
+      data = await resp.json();
+    } catch (err) {
+      showError('Network error — make sure the server is running.');
+      return;
+    }
+
+    stopLoading();
+
+    if (data.error === 'no_replay_url') {
+      hideAll();
+      searchSection.classList.remove('hidden');
+      uploadSection.classList.remove('hidden');
+      uploadDetails.setAttribute('open', '');
+      uploadBanner.textContent = data.message || 'Match found, but no replay URL available. Upload the file manually.';
+      uploadBanner.classList.remove('hidden');
+    } else if (data.error) {
+      showError(data.detail ? `${data.error}: ${data.detail}` : data.error);
+    } else {
+      renderResults(data);
+    }
+  }
+
+  async function handleUpload() {
+    const file = fileInput.files[0];
+    if (!file) {
+      fileInput.style.borderColor = 'var(--error)';
+      setTimeout(() => fileInput.style.borderColor = '', 1500);
+      return;
+    }
+
+    startLoading();
+    loadingText.textContent = 'Uploading and parsing…';
+
+    const form = new FormData();
+    form.append('file', file);
+
+    let data;
+    try {
+      const resp = await fetch('/api/upload', {method:'POST', body:form});
+      data = await resp.json();
+    } catch (err) {
+      showError('Network error — make sure the server is running.');
+      return;
+    }
+
+    stopLoading();
+
+    if (data.error) {
+      showError(data.detail ? `${data.error}: ${data.detail}` : data.error);
+    } else {
+      renderResults(data);
+    }
+  }
+
+  // ── Results rendering ─────────────────────────────────
+  function renderResults(data) {
+    hideAll();
+
+    const players = data.players || [];
+    playerCards.innerHTML = '';
+
+    players.forEach((p, idx) => {
+      const isFastest = idx === 0 && p.feudal_clicked;
+      const civName   = CIVS[p.civilization_id] || (p.civilization_id ? `Civ #${p.civilization_id}` : 'Unknown civ');
+
+      const card = document.createElement('div');
+      card.className = 'player-card' + (isFastest ? ' fastest' : '');
+
+      const badgeClass = isFastest ? 'badge badge-gold' : 'badge badge-dim';
+      const badgeText  = isFastest ? '⚡ Faster Feudal' : (p.feudal_clicked ? 'Feudal reached' : 'Did not Feudal');
+
+      const timeClass  = p.feudal_clicked ? 'feudal-value has-time' : 'feudal-value no-time';
+      const timeText   = p.feudal_time_formatted || '—';
+
+      card.innerHTML = `
+        <span class="${badgeClass}">${badgeText}</span>
+        <div class="player-card-name" title="${esc(p.name)}">${esc(p.name)}</div>
+        <div class="player-card-civ">${esc(civName)}</div>
+        <div class="feudal-block">
+          <span class="feudal-label">Feudal Age</span>
+          <div class="${timeClass}">${esc(timeText)}</div>
+        </div>
+      `;
+
+      playerCards.appendChild(card);
+    });
+
+    resultMeta.textContent = `Version: ${data.version || 'unknown'}`;
+    resultsSection.classList.remove('hidden');
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  // Start in home view
+  showHome();
+</script>
+</body>
+</html>

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>AoE2 Feudal Timer</title>
+  <style>
+    :root {
+      --bg:        #0f0f0f;
+      --surface:   #1a1a1a;
+      --surface2:  #242424;
+      --border:    #333;
+      --accent:    #c89648;
+      --accent-dim:#7a5a28;
+      --text:      #e8e8e8;
+      --text-dim:  #888;
+      --error:     #e05c5c;
+      --radius:    12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      min-height: 100dvh;
+      padding-bottom: 40px;
+    }
+    .container { max-width: 680px; margin: 0 auto; padding: 0 20px; }
+
+    header { padding: 36px 0 28px; text-align: center; }
+    header h1 {
+      font-size: clamp(22px, 5vw, 30px);
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    header p { margin-top: 6px; font-size: 14px; color: var(--text-dim); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      font-size: 13px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-dim); margin-bottom: 14px;
+    }
+
+    label { display: block; font-size: 14px; font-weight: 500; color: var(--text-dim); margin-bottom: 8px; }
+
+    input[type="file"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 15px;
+      padding: 20px 14px;
+      cursor: pointer;
+      -webkit-appearance: none;
+      display: block;
+    }
+    input[type="file"]::file-selector-button {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 12px;
+      padding: 8px 14px;
+    }
+    .hint { margin-top: 8px; font-size: 12px; color: var(--text-dim); }
+
+    button {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #0f0f0f;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 700;
+      min-height: 52px;
+      padding: 0 24px;
+      touch-action: manipulation;
+      transition: opacity 0.15s;
+      width: 100%;
+      margin-top: 14px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:active { opacity: 0.8; }
+    button:disabled { background: var(--accent-dim); cursor: not-allowed; opacity: 0.6; }
+    .btn-secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 500;
+    }
+    .btn-secondary:active { background: var(--border); }
+
+    #loading-section { text-align: center; padding: 48px 0; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      animation: spin 0.8s linear infinite;
+    }
+    #loading-text { color: var(--text-dim); font-size: 15px; }
+
+    #error-section {
+      background: color-mix(in srgb, var(--error) 10%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--error) 35%, transparent);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      margin-bottom: 16px;
+    }
+    #error-message { color: var(--error); font-size: 15px; line-height: 1.6; margin-bottom: 14px; }
+
+    #results-section h2 { font-size: 18px; font-weight: 700; margin-bottom: 14px; }
+    .player-cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 440px) { .player-cards-grid { grid-template-columns: 1fr; } }
+
+    .player-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .player-card.fastest { border-color: var(--accent); }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+      align-self: flex-start;
+    }
+    .badge-gold { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1px solid var(--accent-dim); }
+    .badge-dim  { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+
+    .player-name { font-size: 17px; font-weight: 700; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .player-civ  { font-size: 13px; color: var(--text-dim); margin-bottom: 16px; }
+
+    .feudal-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 4px; }
+    .feudal-value { font-size: 34px; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+    .feudal-value.has-time { color: var(--accent); }
+    .feudal-value.no-time  { color: var(--text-dim); font-size: 20px; }
+
+    .result-meta { font-size: 12px; color: var(--text-dim); text-align: center; margin-bottom: 12px; }
+
+    .hidden { display: none !important; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>AoE2 Feudal Timer</h1>
+    <p>Upload a replay to find Feudal Age click times — runs entirely in your browser</p>
+  </header>
+
+  <div class="card" id="upload-section">
+    <h2>Upload Replay File</h2>
+    <label for="file-input">Select .aoe2record or .zip file</label>
+    <input id="file-input" type="file" accept=".aoe2record,.zip,.mgz">
+    <p class="hint">Parsed locally — your file is never uploaded anywhere</p>
+    <button id="analyze-btn">Analyze Replay</button>
+  </div>
+
+  <div id="loading-section" class="hidden">
+    <div class="spinner"></div>
+    <p id="loading-text">Reading file…</p>
+  </div>
+
+  <div id="error-section" class="hidden">
+    <p id="error-message"></p>
+    <button class="btn-secondary" id="back-btn">← Try Another File</button>
+  </div>
+
+  <div id="results-section" class="hidden">
+    <h2>Results</h2>
+    <div class="player-cards-grid" id="player-cards"></div>
+    <p class="result-meta" id="result-meta"></p>
+    <button class="btn-secondary" id="again-btn">← Analyze Another</button>
+  </div>
+
+</div>
+
+<script>
+// ── Civ lookup ────────────────────────────────────────────────────────────────
+const CIVS = {
+  1:'Britons',2:'Franks',3:'Goths',4:'Teutons',5:'Japanese',
+  6:'Chinese',7:'Byzantines',8:'Persians',9:'Saracens',10:'Turks',
+  11:'Vikings',12:'Mongols',13:'Celts',14:'Spanish',15:'Aztecs',
+  16:'Mayans',17:'Huns',18:'Koreans',19:'Italians',20:'Hindustanis',
+  21:'Incas',22:'Magyars',23:'Slavs',24:'Portuguese',25:'Ethiopians',
+  26:'Malians',27:'Berbers',28:'Khmer',29:'Malay',30:'Burmese',
+  31:'Vietnamese',32:'Bulgarians',33:'Tatars',34:'Cumans',
+  35:'Lithuanians',36:'Burgundians',37:'Sicilians',38:'Poles',
+  39:'Bohemians',40:'Dravidians',41:'Bengalis',42:'Gurjaras',
+  43:'Romans',44:'Armenians',45:'Georgians',
+};
+
+const FEUDAL_TECH_ID = 101;
+const LOADING_MSGS = ['Reading file…','Parsing header…','Scanning operations…','Calculating Feudal times…'];
+
+// ── UI refs ───────────────────────────────────────────────────────────────────
+const uploadSection  = document.getElementById('upload-section');
+const loadingSection = document.getElementById('loading-section');
+const errorSection   = document.getElementById('error-section');
+const resultsSection = document.getElementById('results-section');
+const fileInput      = document.getElementById('file-input');
+const analyzeBtn     = document.getElementById('analyze-btn');
+const loadingText    = document.getElementById('loading-text');
+const errorMessage   = document.getElementById('error-message');
+const playerCards    = document.getElementById('player-cards');
+const resultMeta     = document.getElementById('result-meta');
+
+document.getElementById('analyze-btn').addEventListener('click', handleAnalyze);
+document.getElementById('back-btn').addEventListener('click', showHome);
+document.getElementById('again-btn').addEventListener('click', showHome);
+
+function showHome() {
+  [loadingSection, errorSection, resultsSection].forEach(el => el.classList.add('hidden'));
+  uploadSection.classList.remove('hidden');
+  analyzeBtn.disabled = false;
+}
+
+let _msgInterval = null;
+function startLoading() {
+  uploadSection.classList.add('hidden');
+  errorSection.classList.add('hidden');
+  resultsSection.classList.add('hidden');
+  loadingSection.classList.remove('hidden');
+  analyzeBtn.disabled = true;
+  let i = 0;
+  loadingText.textContent = LOADING_MSGS[0];
+  _msgInterval = setInterval(() => {
+    i = (i + 1) % LOADING_MSGS.length;
+    loadingText.textContent = LOADING_MSGS[i];
+  }, 1400);
+}
+
+function stopLoading() {
+  clearInterval(_msgInterval);
+  analyzeBtn.disabled = false;
+}
+
+function showError(msg) {
+  stopLoading();
+  loadingSection.classList.add('hidden');
+  errorMessage.textContent = msg;
+  errorSection.classList.remove('hidden');
+  uploadSection.classList.remove('hidden');
+}
+
+// ── File handling ─────────────────────────────────────────────────────────────
+async function handleAnalyze() {
+  const file = fileInput.files[0];
+  if (!file) {
+    fileInput.style.borderColor = 'var(--error)';
+    setTimeout(() => fileInput.style.borderColor = '', 1500);
+    return;
+  }
+  startLoading();
+  try {
+    const buf = await file.arrayBuffer();
+    let recordBuf = buf;
+    if (isZip(buf)) {
+      recordBuf = await extractFromZip(buf);
+    }
+    const result = await parseReplay(recordBuf);
+    stopLoading();
+    renderResults(result);
+  } catch(e) {
+    showError(e.message || String(e));
+  }
+}
+
+function isZip(buf) {
+  const b = new Uint8Array(buf, 0, 4);
+  return b[0]===0x50 && b[1]===0x4B && b[2]===0x03 && b[3]===0x04;
+}
+
+async function extractFromZip(buf) {
+  // Use the File System Access / JSZip fallback isn't available without CDN.
+  // Implement minimal ZIP parser for the central directory.
+  // AoE2 ZIPs typically have exactly one .aoe2record entry.
+  const bytes = new Uint8Array(buf);
+  const view = new DataView(buf);
+
+  // Scan for Local File Headers (PK\x03\x04) to find .aoe2record entries
+  for (let i = 0; i < bytes.length - 30; i++) {
+    if (bytes[i]===0x50 && bytes[i+1]===0x4B && bytes[i+2]===0x03 && bytes[i+3]===0x04) {
+      const compression    = view.getUint16(i + 8, true);
+      const compressedSize = view.getUint32(i + 18, true);
+      const uncompressedSize = view.getUint32(i + 22, true);
+      const fnameLen       = view.getUint16(i + 26, true);
+      const extraLen       = view.getUint16(i + 28, true);
+      const dataOffset     = i + 30 + fnameLen + extraLen;
+
+      // Decode filename
+      const fnameBytes = bytes.slice(i + 30, i + 30 + fnameLen);
+      const fname = new TextDecoder().decode(fnameBytes).toLowerCase();
+
+      if (fname.endsWith('.aoe2record') || fname.endsWith('.mgz')) {
+        const entryData = bytes.slice(dataOffset, dataOffset + compressedSize);
+        if (compression === 0) {
+          return entryData.buffer.slice(entryData.byteOffset, entryData.byteOffset + entryData.byteLength);
+        } else if (compression === 8) {
+          // Deflate
+          const ds = new DecompressionStream('deflate-raw');
+          const writer = ds.writable.getWriter();
+          const reader = ds.readable.getReader();
+          writer.write(entryData);
+          writer.close();
+          return await readAllChunks(reader, uncompressedSize);
+        }
+        throw new Error(`Unsupported ZIP compression method ${compression}`);
+      }
+    }
+  }
+  throw new Error('No .aoe2record file found inside the ZIP');
+}
+
+async function readAllChunks(reader, expectedSize) {
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const {value, done} = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    total += value.length;
+  }
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.length; }
+  return out.buffer;
+}
+
+// ── AoE2 Replay Parser ────────────────────────────────────────────────────────
+
+async function parseReplay(buf) {
+  const bytes  = new Uint8Array(buf);
+  const view   = new DataView(buf);
+  const size   = buf.byteLength;
+
+  if (size < 8) throw new Error('File too small to be a valid replay');
+
+  // header_len includes the 8-byte prefix; compressed data is bytes[8..headerLen-1]
+  const headerLen = view.getUint32(0, true);
+  if (headerLen >= size) throw new Error(`Invalid header length ${headerLen}`);
+
+  const bodyOffset = headerLen;
+
+  // Try extracting player names from the compressed header
+  let players = [];
+  try {
+    const compressed = bytes.slice(8, headerLen);
+    players = await extractPlayerInfo(compressed);
+  } catch (e) {
+    // Silently fall back to generic names
+  }
+
+  // Skip the META section at body start
+  const opsStart = skipMeta(view, bodyOffset, size);
+
+  // Parse operations for SYNC time and RESEARCH feudal events
+  const feudalEvents = parseOps(view, bytes, opsStart, size);
+
+  return buildResult(players, feudalEvents);
+}
+
+// ── META section skip ─────────────────────────────────────────────────────────
+// From mgz/fast/__init__.py meta():
+//   first(4) | if first!=500: +4 | +20 | a,b,_(12) | if a!=0: -12 | if b==2(DE): -8
+function skipMeta(view, offset, size) {
+  if (offset + 40 > size) return offset;
+  const first = view.getUint32(offset, true);
+  let pos = offset + 4;
+  if (first !== 500) pos += 4;
+  pos += 20;
+  if (pos + 12 > size) return pos;
+  const a = view.getUint32(pos, true);
+  const b = view.getUint32(pos + 4, true);
+  pos += 12;
+  if (a !== 0) pos -= 12;   // AOC 1.0x
+  if (b === 2) pos -= 8;    // DE: seek back 8
+  return pos;
+}
+
+// ── SYNC size calculation ─────────────────────────────────────────────────────
+// From mgz/fast/__init__.py sync():
+//   increment(4) + marker(4)
+//   If marker != 0: total = 4 (seek back 4 means only increment consumed)
+//   Else: read 16 bytes → is_de at byte [12..15] of that block = offset+20 overall
+//     If !is_de: total = 8+16+8 = 32
+//     If is_de:  total = 8 + 8*11*4 + 4 = 364
+function syncSize(view, offset, bufSize) {
+  if (offset + 8 > bufSize) return { inc: 0, size: 4 };
+  const inc    = view.getUint32(offset,     true);
+  const marker = view.getUint32(offset + 4, true);
+  if (marker !== 0) return { inc, size: 4 };
+  if (offset + 24 > bufSize) return { inc, size: 32 };
+  const is_de = view.getUint32(offset + 20, true);  // offset+8+12
+  if (!is_de) return { inc, size: 32 };
+  return { inc, size: 364 };
+}
+
+// ── Operation loop ────────────────────────────────────────────────────────────
+function parseOps(view, bytes, start, size) {
+  let offset = start;
+  let timeMs = 0;
+  const events = [];  // {time_ms, player_id}
+
+  outer: while (offset + 4 < size) {
+    const opType = view.getUint32(offset, true);
+    offset += 4;
+
+    switch (opType) {
+      case 1: {  // ACTION
+        if (offset + 4 > size) break outer;
+        const length = view.getUint32(offset, true);
+        offset += 4;
+        if (length < 1 || offset + length + 4 > size) break outer;
+
+        const actionId       = bytes[offset];
+        const abStart        = offset + 1;   // action_bytes start
+        const abLen          = length - 1;   // action_bytes length
+
+        if (actionId === 0x65 && abLen >= 10) {  // RESEARCH
+          // Detect DE-71094: abLen === inner_length + 3
+          const innerLen = view.getInt16(abStart + 1, true);
+          if (abLen === innerLen + 3) {
+            // DE-71094 format: player_id at abStart[0], tech_id at abStart[9]
+            const player_id = view.getInt8(abStart);
+            const tech_id   = view.getInt16(abStart + 9, true);
+            if (tech_id === FEUDAL_TECH_ID && player_id > 0)
+              events.push({ time_ms: timeMs, player_id });
+          } else if (abLen >= 10) {
+            // Non-DE format: player_id at abStart[7..8]
+            const player_id = view.getInt16(abStart + 7, true);
+            const tech_id   = abLen >= 19
+              ? view.getUint32(abStart + 11, true)
+              : view.getInt16(abStart + 9,  true);
+            if (tech_id === FEUDAL_TECH_ID && player_id > 0)
+              events.push({ time_ms: timeMs, player_id });
+          }
+        }
+
+        offset += length;   // skip past action_bytes
+        offset += 4;        // skip sequence uint32
+        break;
+      }
+
+      case 2: {  // SYNC
+        const { inc, size: sz } = syncSize(view, offset, size);
+        timeMs += inc;
+        offset += sz;
+        break;
+      }
+
+      case 3: {  // VIEWLOCK: x(f) + y(f) + unk(I) = 12 bytes
+        offset += 12;
+        break;
+      }
+
+      case 4: {  // CHAT: unk(I) + length(I) + string(length) = 8+length bytes
+        if (offset + 8 > size) break outer;
+        const msgLen = view.getUint32(offset + 4, true);
+        offset += 8 + msgLen;
+        break;
+      }
+
+      case 5:   // POSTGAME — end of meaningful game data
+        break outer;
+
+      default:  // SAVE or unknown — stop parsing
+        break outer;
+    }
+  }
+
+  return events;
+}
+
+// ── Player info from compressed header ───────────────────────────────────────
+// Uses DecompressionStream('deflate-raw') since ZLIB_WBITS=-15 in mgz
+// Extracts DE strings (marker 0x60 0x0A + uint16 length + bytes)
+async function extractPlayerInfo(compressed) {
+  const ds = new DecompressionStream('deflate-raw');
+  const writer = ds.writable.getWriter();
+  const reader = ds.readable.getReader();
+  writer.write(compressed);
+  writer.close();
+  const decompBuf = await readAllChunks(reader);
+  const decompressed = new Uint8Array(decompBuf);
+  const dv = new DataView(decompBuf);
+
+  // Collect DE strings: marker [0x60, 0x0A] + uint16 length + UTF-8 bytes
+  const strings = [];
+  for (let i = 0; i + 4 < decompressed.length; i++) {
+    if (decompressed[i] === 0x60 && decompressed[i + 1] === 0x0A) {
+      const len = dv.getUint16(i + 2, true);
+      if (len > 0 && len < 64 && i + 4 + len <= decompressed.length) {
+        const strBytes = decompressed.slice(i + 4, i + 4 + len);
+        if (strBytes.every(b => b >= 32 && b < 128)) {
+          strings.push(new TextDecoder().decode(strBytes).trim());
+        }
+      }
+    }
+  }
+
+  // Scan for 'num_players' indicator and player slots.
+  // The DE header encodes civilization IDs as uint32 values.
+  // We can extract civ IDs by looking at the binary pattern around player slots,
+  // but that's complex. Instead, extract all plausible player names from strings.
+  // Filter out known non-name strings.
+  const SKIP = new Set(['Gaia', 'GAIA', '', 'MP Random', 'Random', 'Scenario',
+                        'Regicide', 'King of the Hill', 'Wonder Race',
+                        'Defend the Wonder', 'Turbo Random Map', 'Capture the Relic',
+                        'Sudden Death', 'Fortress', 'Empire Wars']);
+  const names = strings.filter(s =>
+    s.length >= 2 && s.length < 40 &&
+    !SKIP.has(s) &&
+    !s.startsWith('SUBSCRIBEDMODS') &&
+    !s.includes(':') &&
+    !/^[\d.]+$/.test(s)  // not purely numeric/version
+  );
+
+  // Take first two unique names (player 1 then player 2 in header order)
+  const seen = new Set();
+  const result = [];
+  for (const n of names) {
+    if (!seen.has(n)) {
+      seen.add(n);
+      result.push({ name: n, civilization_id: 0 });
+      if (result.length === 2) break;
+    }
+  }
+  return result;
+}
+
+// ── Result builder ────────────────────────────────────────────────────────────
+function buildResult(players, events) {
+  // Deduplicate: first event per player_id
+  const firstByPlayer = {};
+  for (const ev of events) {
+    if (!(ev.player_id in firstByPlayer))
+      firstByPlayer[ev.player_id] = ev.time_ms;
+  }
+
+  const playerIds = Object.keys(firstByPlayer).map(Number).sort();
+
+  // Map player_ids to names if available
+  // players array is in header-order (slot 1, slot 2, …)
+  const resultPlayers = playerIds.map((pid, idx) => {
+    const info = players[idx] || {};
+    return {
+      player_number: pid,
+      name: info.name || `Player ${pid}`,
+      civilization_id: info.civilization_id || 0,
+      feudal_time_ms: firstByPlayer[pid],
+      feudal_time_formatted: msToMMSS(firstByPlayer[pid]),
+      feudal_clicked: true,
+    };
+  });
+
+  // Add any players from the header with no feudal event
+  const eventPids = new Set(playerIds);
+  players.forEach((p, idx) => {
+    const pid = idx + 1;
+    if (!eventPids.has(pid)) {
+      resultPlayers.push({
+        player_number: pid,
+        name: p.name || `Player ${pid}`,
+        civilization_id: p.civilization_id || 0,
+        feudal_time_ms: null,
+        feudal_time_formatted: null,
+        feudal_clicked: false,
+      });
+    }
+  });
+
+  // Sort: feudal clickers first, then by time
+  resultPlayers.sort((a, b) => {
+    if (a.feudal_clicked !== b.feudal_clicked) return a.feudal_clicked ? -1 : 1;
+    return (a.feudal_time_ms || Infinity) - (b.feudal_time_ms || Infinity);
+  });
+
+  return { players: resultPlayers };
+}
+
+function msToMMSS(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// ── Results rendering ─────────────────────────────────────────────────────────
+function renderResults(data) {
+  loadingSection.classList.add('hidden');
+  uploadSection.classList.remove('hidden');
+
+  const ps = data.players || [];
+  playerCards.innerHTML = '';
+
+  if (ps.length === 0) {
+    showError('No player data found in this replay. The file may be corrupt or use an unsupported format.');
+    return;
+  }
+
+  ps.forEach((p, idx) => {
+    const isFastest = idx === 0 && p.feudal_clicked;
+    const civName = CIVS[p.civilization_id] || (p.civilization_id ? `Civ #${p.civilization_id}` : '');
+
+    const card = document.createElement('div');
+    card.className = 'player-card' + (isFastest ? ' fastest' : '');
+
+    const bClass = isFastest ? 'badge badge-gold' : 'badge badge-dim';
+    const bText  = isFastest ? '⚡ Faster Feudal'
+                 : p.feudal_clicked ? 'Feudal reached'
+                 : 'Did not Feudal';
+
+    const tClass = p.feudal_clicked ? 'feudal-value has-time' : 'feudal-value no-time';
+    const tText  = p.feudal_time_formatted || '—';
+
+    card.innerHTML = `
+      <span class="${bClass}">${bText}</span>
+      <div class="player-name" title="${esc(p.name)}">${esc(p.name)}</div>
+      ${civName ? `<div class="player-civ">${esc(civName)}</div>` : '<div class="player-civ">&nbsp;</div>'}
+      <div style="margin-top:auto">
+        <span class="feudal-label">Feudal Age</span>
+        <div class="${tClass}">${tText}</div>
+      </div>
+    `;
+    playerCards.appendChild(card);
+  });
+
+  resultMeta.textContent = `${ps.filter(p => p.feudal_clicked).length} of ${ps.length} players reached Feudal Age`;
+  resultsSection.classList.remove('hidden');
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Init
+showHome();
+</script>
+</body>
+</html>
