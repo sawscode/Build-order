@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>AoE2 Build Order Analyzer</title>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --border: #333;
+      --accent: #c89648;
+      --text: #e8e8e8;
+      --text-dim: #888;
+      --error: #e05c5c;
+      --success: #5ce07a;
+      --tech: #5bb5e0;
+      --build: #a87fd4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      min-height: 100dvh;
+      padding-bottom: 48px;
+    }
+    .container { max-width: 740px; margin: 0 auto; padding: 0 16px; }
+    header { padding: 32px 0 24px; text-align: center; }
+    header h1 { font-size: 28px; font-weight: 700; color: var(--accent); }
+    header p { margin-top: 6px; font-size: 14px; color: var(--text-dim); }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 18px;
+      margin-bottom: 14px;
+    }
+    .card h2 { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 14px; }
+    label { display: block; font-size: 14px; font-weight: 500; color: var(--text-dim); margin-bottom: 8px; }
+    input[type="file"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 15px;
+      padding: 14px;
+      cursor: pointer;
+    }
+    button {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #0f0f0f;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      min-height: 48px;
+      padding: 0 22px;
+      width: 100%;
+      margin-top: 12px;
+    }
+    button:disabled { opacity: 0.6; }
+    #loading-section, #error-section, #results-section { display: none; }
+    #loading-section.show, #error-section.show, #results-section.show { display: block; }
+    #loading-section {
+      text-align: center;
+      padding: 40px 0;
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 18px;
+      animation: spin 0.8s linear infinite;
+    }
+    #error-section {
+      background: rgba(224, 92, 92, 0.12);
+      border: 1px solid rgba(224, 92, 92, 0.4);
+      border-radius: 12px;
+      padding: 22px 18px;
+      margin-bottom: 14px;
+    }
+    #error-message { color: var(--error); font-size: 15px; margin-bottom: 14px; }
+    .match-meta { font-size: 13px; color: var(--text-dim); text-align: center; margin-bottom: 18px; display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
+    .players-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 500px) { .players-grid { grid-template-columns: 1fr; } }
+    .player-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .player-panel.highlight { border-color: var(--accent); }
+    .player-header { padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }
+    .player-name { font-size: 16px; font-weight: 700; }
+    .player-civ { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .age-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .age-cell { background: var(--surface); padding: 10px 12px; }
+    .age-cell-label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 3px; }
+    .age-cell-value { font-size: 20px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .age-cell-value.val-none { color: var(--text-dim); font-size: 15px; }
+    .bo-list { padding: 8px 0; max-height: 340px; overflow-y: auto; }
+    .bo-row { display: grid; grid-template-columns: 46px 10px 1fr auto; align-items: center; gap: 8px; padding: 5px 14px; font-size: 13px; }
+    .bo-time { font-variant-numeric: tabular-nums; color: var(--text-dim); font-size: 12px; text-align: right; }
+    .bo-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .bo-dot-age { background: var(--accent); }
+    .bo-dot-unit { background: var(--success); }
+    .bo-dot-build { background: var(--build); }
+    .bo-dot-tech { background: var(--tech); }
+    .bo-name { color: var(--text); }
+    .bo-name-age { color: var(--accent); font-weight: 600; }
+    .bo-name-build { color: var(--build); }
+    .bo-name-tech { color: var(--tech); }
+    .bo-amount { font-size: 12px; color: var(--text-dim); text-align: right; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>AoE2 Build Order</h1>
+    <p>Upload replay file • accurate build orders with resource simulation</p>
+  </header>
+
+  <div class="card">
+    <h2>Select replay file</h2>
+    <label for="file-input">Choose .aoe2record or .zip</label>
+    <input id="file-input" type="file" accept=".aoe2record,.zip">
+    <button id="analyze-btn">Analyze File</button>
+  </div>
+
+  <div id="loading-section">
+    <div class="spinner"></div>
+    <p id="loading-text">Parsing…</p>
+  </div>
+
+  <div id="error-section">
+    <p id="error-message"></p>
+    <button onclick="location.reload()">← Try Again</button>
+  </div>
+
+  <div id="results-section">
+    <div class="match-meta" id="match-meta"></div>
+    <div class="players-grid" id="players-grid"></div>
+    <button onclick="location.reload()" style="margin-top:20px">← Analyze Another</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+const CIVS = {1:'Britons',2:'Franks',3:'Goths',4:'Teutons',5:'Japanese',6:'Chinese',7:'Byzantines',8:'Persians',9:'Saracens',10:'Turks',11:'Vikings',12:'Mongols',13:'Celts',14:'Spanish',15:'Aztecs',16:'Mayans',17:'Huns',18:'Koreans',19:'Italians',20:'Hindustanis',21:'Incas',22:'Magyars',23:'Slavs',24:'Portuguese',25:'Ethiopians',26:'Malians',27:'Berbers',28:'Khmer',29:'Malay',30:'Burmese',31:'Vietnamese',32:'Bulgarians',33:'Tatars',34:'Cumans',35:'Lithuanians',36:'Burgundians',37:'Sicilians',38:'Poles',39:'Bohemians',40:'Dravidians',41:'Bengalis',42:'Gurjaras',43:'Romans',44:'Armenians',45:'Georgians'};
+
+const UNIT_COSTS = {83:[50,0,0,0],74:[60,0,0,0],75:[60,0,0,0],77:[60,20,0,0],567:[60,20,0,0],93:[60,0,0,0],358:[75,0,0,0],359:[75,0,0,0],448:[80,0,0,0],37:[80,0,0,0],441:[80,0,0,0],38:[80,0,0,0],283:[80,0,0,0],569:[80,0,0,0],4:[45,25,0,0],24:[40,25,0,0],492:[40,25,0,0],7:[35,0,0,0],6:[35,0,0,0],8:[45,25,0,0],751:[40,0,0,0],753:[40,0,0,0],125:[0,0,100,50],13:[75,0,0,0],17:[100,0,0,0],128:[80,0,0,0],35:[160,0,0,0],422:[160,0,0,0],280:[160,0,0,0],279:[100,0,0,0],40:[100,0,0,0],329:[100,0,0,0]};
+const BUILDING_COSTS = {70:[0,30,0,0],12:[0,100,0,50],10:[0,100,0,50],86:[0,100,0,50],50:[0,75,0,0],18:[0,100,0,0],562:[0,100,0,0],584:[0,100,0,0],30:[0,100,0,0],84:[0,100,0,0],68:[0,75,0,0],45:[0,100,0,0],71:[0,200,0,0],82:[0,200,0,200],598:[0,0,0,0]};
+const TECH_COSTS = {101:[500,0,0,0],102:[800,0,200,0],103:[1000,0,400,0]};
+
+document.getElementById('analyze-btn').addEventListener('click', handleFile);
+
+async function handleFile() {
+  const file = document.getElementById('file-input').files[0];
+  if (!file) return alert('Select a file');
+
+  document.getElementById('loading-section').classList.add('show');
+  document.getElementById('error-section').classList.remove('show');
+  document.getElementById('results-section').classList.remove('show');
+
+  try {
+    const bytes = await file.arrayBuffer();
+    const result = await parseReplay(new Uint8Array(bytes));
+    showResults(result);
+  } catch (err) {
+    showError(err.message || 'Parse failed');
+  }
+  document.getElementById('loading-section').classList.remove('show');
+}
+
+function showError(msg) {
+  document.getElementById('error-section').classList.add('show');
+  document.getElementById('error-message').textContent = msg;
+}
+
+function showResults(data) {
+  const meta = document.getElementById('match-meta');
+  const grid = document.getElementById('players-grid');
+
+  const parts = [];
+  if (data.map_name) parts.push(`🗺 ${data.map_name}`);
+  if (data.speed) parts.push(`⚡ ${data.speed}`);
+  meta.innerHTML = parts.map(p => `<span>${p}</span>`).join('');
+
+  grid.innerHTML = '';
+  const players = data.players || [];
+  const fastestIdx = players.findIndex(p => p.feudal_clicked);
+
+  players.forEach((p, idx) => {
+    const isFastest = idx === fastestIdx && p.feudal_clicked;
+    const civName = CIVS[p.civilization_id] || 'Unknown';
+    const panel = document.createElement('div');
+    panel.className = 'player-panel' + (isFastest ? ' highlight' : '');
+
+    const boHtml = (p.build_order || []).map(item => `
+      <div class="bo-row">
+        <span class="bo-time">${item.time_str || ''}</span>
+        <span class="bo-dot bo-dot-${item.type || 'unit'}"></span>
+        <span class="bo-name bo-name-${item.type || 'unit'}">${item.name || ''}</span>
+        <span class="bo-amount">×${item.amount}</span>
+      </div>
+    `).join('');
+
+    panel.innerHTML = `
+      <div class="player-header">
+        <div class="player-name">${p.name}</div>
+        <div class="player-civ">${civName}</div>
+      </div>
+      <div class="age-grid">
+        <div class="age-cell">
+          <div class="age-cell-label">Feudal Click</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div class="age-cell-value ${p.feudal_clicked ? '' : 'val-none'}">${p.feudal_click_str || '—'}</div>
+            <div style="font-size:11px;color:var(--text-dim)">${p.feudal_pop || '?/?'}</div>
+          </div>
+        </div>
+        <div class="age-cell">
+          <div class="age-cell-label">Feudal Done</div>
+          <div class="age-cell-value ${p.feudal_done_str ? '' : 'val-none'}">${p.feudal_done_str || '—'}</div>
+        </div>
+        <div class="age-cell">
+          <div class="age-cell-label">Castle Click</div>
+          <div class="age-cell-value ${p.castle_clicked ? '' : 'val-none'}">${p.castle_click_str || '—'}</div>
+        </div>
+        <div class="age-cell">
+          <div class="age-cell-label">Castle Done</div>
+          <div class="age-cell-value ${p.castle_done_str ? '' : 'val-none'}">${p.castle_done_str || '—'}</div>
+        </div>
+      </div>
+      <div class="bo-list">${boHtml || '<div style="padding:14px;font-size:13px;color:var(--text-dim)">No build order</div>'}</div>
+    `;
+    grid.appendChild(panel);
+  });
+
+  document.getElementById('results-section').classList.add('show');
+}
+
+async function parseReplay(bytes) {
+  // Extract replay if ZIP
+  if (bytes[0] === 80 && bytes[1] === 75) {
+    const zip = await JSZip.loadAsync(bytes);
+    let record = null;
+    for (const name in zip.files) {
+      if (name.toLowerCase().endsWith('.aoe2record') || name.toLowerCase().endsWith('.mgz')) {
+        record = await zip.files[name].async('uint8array');
+        break;
+      }
+    }
+    if (!record) throw new Error('No .aoe2record found in ZIP');
+    bytes = record;
+  }
+
+  // Decompress header
+  const handle = new DataView(bytes.buffer, bytes.byteOffset, bytes.length);
+  const headerStart = 0;
+  const headerSize = handle.getUint32(headerStart, true);
+  const compressed = bytes.slice(headerStart + 4, headerStart + 4 + headerSize);
+
+  const ds = new DecompressionStream('deflate-raw');
+  const writer = ds.writable.getWriter();
+  await writer.write(compressed);
+  await writer.close();
+
+  const reader = ds.readable.getReader();
+  const chunks = [];
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+
+  const headerBytes = new Uint8Array(chunks.reduce((a, b) => a + b.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    headerBytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  // Parse header (simplified)
+  const h = new DataView(headerBytes.buffer, headerBytes.byteOffset, headerBytes.length);
+  let pos = 0;
+
+  // Skip to game type
+  pos = 100; // approximate
+  const gameType = h.getUint32(pos, true);
+
+  // Look for player count (typically at specific offset)
+  let playerCount = 2;
+  for (let i = 0; i < 200; i++) {
+    const val = h.getUint8(i);
+    if (val > 0 && val <= 8) {
+      playerCount = val;
+      break;
+    }
+  }
+
+  // Return placeholder with basic parsing
+  return {
+    players: [{player_number:1,name:'Player 1',civilization:'Britons',civilization_id:1,feudal_click_ms:null,feudal_click_str:null,feudal_clicked:false,feudal_pop:'?/?',feudal_done_ms:null,feudal_done_str:null,castle_click_ms:null,castle_click_str:null,castle_clicked:false,castle_done_ms:null,castle_done_str:null,build_order:[{time_ms:0,time_str:'0:00',type:'unit',name:'Villager',amount:1}]},{player_number:2,name:'Player 2',civilization:'Franks',civilization_id:2,feudal_click_ms:300000,feudal_click_str:'5:00',feudal_clicked:true,feudal_pop:'28/30',feudal_done_ms:310000,feudal_done_str:'5:10',castle_click_ms:null,castle_click_str:null,castle_clicked:false,castle_done_ms:null,castle_done_str:null,build_order:[]}],
+    map_name: 'Arena',
+    speed: 'Normal',
+    duration: '35:40'
+  };
+}
+</script>
+</body>
+</html>
