@@ -400,6 +400,23 @@ const TECHS = {
   439:'Heresy', 440:'Supremacy',
 };
 
+// ── Unit training times in ms at 1.0× speed ───────────────────────────────────
+// Used to model production queue depth and filter spam-clicks.
+const TRAIN_MS = {
+  83:25000, 74:21000, 75:21000, 77:21000, 567:21000,   // villager / infantry line
+  93:22000, 358:22000, 359:22000,                        // spear line
+  4:35000, 7:22000, 24:27000, 492:35000, 8:35000,       // archer range
+  448:30000, 37:30000, 441:30000,                        // stable line (scout/cav)
+  38:30000, 283:30000, 569:30000,                        // knight line
+  751:35000, 753:35000,                                  // eagle line
+  125:51000,                                             // monk
+  13:40000, 17:36000, 539:60000,                        // dock
+  35:36000, 422:36000, 548:36000,                        // rams
+  280:46000, 550:46000,                                  // mangonel/onager
+  279:30000, 542:30000,                                  // scorpion
+  40:75000, 46:60000,                                    // unique heavies
+};
+
 const LOADING_MSGS = ['Reading file…','Parsing header…','Scanning operations…','Building order…'];
 
 // ── UI refs ───────────────────────────────────────────────────────────────────
@@ -581,6 +598,29 @@ function parseOps(view, bytes, start, size) {
   const feudalTimes  = {};  // player_id -> ms
   const castleTimes  = {};  // player_id -> ms
   const buildOrders  = {};  // player_id -> [{time_ms, type, id, name, amount}]
+  // Per-building production queue: pid -> buildingKey -> sorted array of unit finish times
+  const bQueues = {};
+
+  // Returns how many units were actually accepted into the queue (0 = full, spam rejected).
+  // Mutates bQueues in place.
+  function tryQueue(pid, bKey, unitId, wantAmount, now) {
+    if (!bQueues[pid]) bQueues[pid] = {};
+    if (!bQueues[pid][bKey]) bQueues[pid][bKey] = [];
+    const q = bQueues[pid][bKey];
+    const trainMs = TRAIN_MS[unitId] || 32000;
+
+    // Evict finished slots
+    while (q.length > 0 && q[0] <= now) q.shift();
+
+    const slots = 10 - q.length;
+    if (slots <= 0) return 0;
+    const actual = Math.min(wantAmount, slots);
+    for (let k = 0; k < actual; k++) {
+      const prev = q.length > 0 ? q[q.length - 1] : now;
+      q.push(prev + trainMs);
+    }
+    return actual;
+  }
 
   function add(pid, ev) {
     if (!buildOrders[pid]) buildOrders[pid] = [];
@@ -654,39 +694,59 @@ function parseOps(view, bytes, start, size) {
         }
 
         // ── DE_QUEUE (0x81) — DE-71094 only ──
-        // raw format: <h4xhhh4x>  unit_id at raw[8..9] = abStart[11..12]
-        //                          amount  at raw[10..11] = abStart[13..14]
+        // raw: <h4xhhh4x[selected×I]>
+        //   selected at abStart+3, unit_id at abStart+11, amount at abStart+13
+        //   building instance IDs at abStart+19, abStart+23, …
         else if (actionId === 0x81 && isDE71094 && abLen >= 16) {
           const pid = view.getInt8(abStart);
           if (pid > 0 && pid <= 8 && !(pid in castleTimes)) {
-            const unit_id = view.getInt16(abStart + 11, true);
-            const amount  = view.getInt16(abStart + 13, true);
+            const selected = Math.max(0, view.getInt16(abStart + 3, true));
+            const unit_id  = view.getInt16(abStart + 11, true);
+            const want     = Math.max(1, view.getInt16(abStart + 13, true));
             if (unit_id > 0 && unit_id < 3000) {
-              add(pid, {
-                time_ms: timeMs,
-                type:    'unit',
-                id:      unit_id,
-                name:    UNITS[unit_id] || `Unit #${unit_id}`,
-                amount:  amount > 0 ? amount : 1,
-              });
+              // Queue `want` units into each selected building; spam clicks rejected
+              // when that building's queue is full (>= 10 slots occupied).
+              let totalActual = 0;
+              const nBuildings = selected > 0 ? selected : 1;
+              for (let bi = 0; bi < nBuildings; bi++) {
+                const bOff = abStart + 19 + bi * 4;
+                const bKey = (selected > 0 && bOff + 4 <= offset + length)
+                  ? view.getUint32(bOff, true)
+                  : (pid * 100 + bi);  // fallback: synthetic key per player
+                totalActual += tryQueue(pid, bKey, unit_id, want, timeMs);
+              }
+              if (totalActual > 0) {
+                add(pid, {
+                  time_ms: timeMs,
+                  type:    'unit',
+                  id:      unit_id,
+                  name:    UNITS[unit_id] || `Unit #${unit_id}`,
+                  amount:  totalActual,
+                });
+              }
             }
           }
         }
 
         // ── MAKE (0x64) — DE-71094 only ──
-        // raw format: <H6xh>  unit_id at raw[8..9] = abStart[11..12]
+        // raw: <H6xh>  building_type at abStart+3, unit_id at abStart+11
         else if (actionId === 0x64 && isDE71094 && abLen >= 13) {
           const pid = view.getInt8(abStart);
           if (pid > 0 && pid <= 8 && !(pid in castleTimes)) {
+            const bType   = view.getUint16(abStart + 3, true);  // building type as queue key
             const unit_id = view.getInt16(abStart + 11, true);
             if (unit_id > 0 && unit_id < 3000) {
-              add(pid, {
-                time_ms: timeMs,
-                type:    'unit',
-                id:      unit_id,
-                name:    UNITS[unit_id] || `Unit #${unit_id}`,
-                amount:  1,
-              });
+              const bKey   = pid * 10000 + bType;  // per-player per-building-type key
+              const actual = tryQueue(pid, bKey, unit_id, 1, timeMs);
+              if (actual > 0) {
+                add(pid, {
+                  time_ms: timeMs,
+                  type:    'unit',
+                  id:      unit_id,
+                  name:    UNITS[unit_id] || `Unit #${unit_id}`,
+                  amount:  1,
+                });
+              }
             }
           }
         }
