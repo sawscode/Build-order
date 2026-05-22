@@ -5,20 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0f0f0f">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>AoE2 Feudal Timer</title>
+  <title>AoE2 Build Order</title>
   <style>
     :root {
-      --bg:        #0f0f0f;
-      --surface:   #1a1a1a;
-      --surface2:  #242424;
-      --border:    #333;
-      --accent:    #c89648;
-      --accent-dim:#8a6530;
-      --text:      #e8e8e8;
-      --text-dim:  #888;
-      --error:     #e05c5c;
-      --success:   #5ce07a;
-      --radius:    12px;
+      --bg:         #0f0f0f;
+      --surface:    #1a1a1a;
+      --surface2:   #242424;
+      --border:     #333;
+      --accent:     #c89648;
+      --accent-dim: #8a6530;
+      --text:       #e8e8e8;
+      --text-dim:   #888;
+      --error:      #e05c5c;
+      --success:    #5ce07a;
+      --tech:       #5bb5e0;
+      --build:      #a87fd4;
+      --radius:     12px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,22 +32,22 @@
       font-size: 16px;
       line-height: 1.5;
       min-height: 100dvh;
-      padding-bottom: 40px;
+      padding-bottom: 48px;
     }
 
     .container {
-      max-width: 680px;
+      max-width: 740px;
       margin: 0 auto;
-      padding: 0 20px;
+      padding: 0 16px;
     }
 
-    /* ── Header ─────────────────────────────── */
+    /* ── Header ── */
     header {
-      padding: 36px 0 28px;
+      padding: 32px 0 24px;
       text-align: center;
     }
     header h1 {
-      font-size: clamp(22px, 5vw, 30px);
+      font-size: clamp(20px, 5vw, 28px);
       font-weight: 700;
       color: var(--accent);
       letter-spacing: -0.5px;
@@ -56,17 +58,16 @@
       color: var(--text-dim);
     }
 
-    /* ── Cards / sections ───────────────────── */
+    /* ── Cards ── */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 22px 20px;
-      margin-bottom: 16px;
+      padding: 20px 18px;
+      margin-bottom: 14px;
     }
-
     .card h2 {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -74,7 +75,7 @@
       margin-bottom: 14px;
     }
 
-    /* ── Inputs ─────────────────────────────── */
+    /* ── Inputs ── */
     label {
       display: block;
       font-size: 14px;
@@ -82,27 +83,24 @@
       color: var(--text-dim);
       margin-bottom: 8px;
     }
-
     .input-row {
       display: flex;
       gap: 10px;
     }
-
     input[type="text"] {
       flex: 1;
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 8px;
       color: var(--text);
-      font-size: 16px; /* prevents iOS auto-zoom */
-      padding: 13px 14px;
+      font-size: 16px;
+      padding: 12px 14px;
       outline: none;
       transition: border-color 0.15s;
       -webkit-appearance: none;
     }
     input[type="text"]:focus { border-color: var(--accent); }
     input[type="text"].shake { animation: shake 0.35s ease; border-color: var(--error); }
-
     input[type="file"] {
       width: 100%;
       background: var(--surface2);
@@ -114,14 +112,13 @@
       cursor: pointer;
       -webkit-appearance: none;
     }
-
     .hint {
       margin-top: 8px;
       font-size: 12px;
       color: var(--text-dim);
     }
 
-    /* ── Buttons ─────────────────────────────── */
+    /* ── Buttons ── */
     button {
       background: var(--accent);
       border: none;
@@ -139,7 +136,6 @@
     }
     button:active { opacity: 0.8; }
     button:disabled { background: var(--accent-dim); cursor: not-allowed; opacity: 0.6; }
-
     .btn-secondary {
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -150,8 +146,7 @@
     }
     .btn-secondary:active { background: var(--border); }
 
-    /* ── Upload collapsible ─────────────────── */
-    details { border-radius: var(--radius); }
+    /* ── Upload collapsible ── */
     details > summary {
       cursor: pointer;
       font-size: 14px;
@@ -164,7 +159,6 @@
     details > summary::before { content: '▶  '; font-size: 10px; }
     details[open] > summary::before { content: '▼  '; }
     details > summary::-webkit-details-marker { display: none; }
-
     .upload-inner {
       margin-top: 14px;
       display: flex;
@@ -173,12 +167,11 @@
     }
     .upload-inner button { width: 100%; }
 
-    /* ── Loading ─────────────────────────────── */
+    /* ── Loading ── */
     #loading-section {
       text-align: center;
       padding: 40px 0;
     }
-
     .spinner {
       width: 44px;
       height: 44px;
@@ -188,28 +181,19 @@
       margin: 0 auto 18px;
       animation: spin 0.8s linear infinite;
     }
+    #loading-text { color: var(--text-dim); font-size: 15px; }
 
-    #loading-text {
-      color: var(--text-dim);
-      font-size: 15px;
-    }
-
-    /* ── Error ───────────────────────────────── */
+    /* ── Error ── */
     #error-section {
       background: color-mix(in srgb, var(--error) 12%, var(--surface));
       border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
       border-radius: var(--radius);
-      padding: 22px 20px;
-      margin-bottom: 16px;
-    }
-
-    #error-message {
-      color: var(--error);
-      font-size: 15px;
+      padding: 22px 18px;
       margin-bottom: 14px;
     }
+    #error-message { color: var(--error); font-size: 15px; margin-bottom: 14px; }
 
-    /* ── Info banner ─────────────────────────── */
+    /* ── Info banner ── */
     .info-banner {
       background: color-mix(in srgb, var(--accent) 12%, var(--surface));
       border: 1px solid var(--accent-dim);
@@ -217,103 +201,182 @@
       color: var(--text);
       font-size: 14px;
       line-height: 1.6;
-      padding: 14px 16px;
-      margin-bottom: 14px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
     }
 
-    /* ── Results ─────────────────────────────── */
-    #results-section h2 {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 14px;
+    /* ── Results meta bar ── */
+    .match-meta {
+      font-size: 13px;
+      color: var(--text-dim);
+      text-align: center;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
     }
+    .match-meta span { white-space: nowrap; }
 
-    .player-cards-grid {
+    /* ── Players grid ── */
+    .players-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 500px) {
+      .players-grid { grid-template-columns: 1fr; }
     }
 
-    @media (max-width: 420px) {
-      .player-cards-grid { grid-template-columns: 1fr; }
-    }
-
-    .player-card {
+    /* ── Player panel ── */
+    .player-panel {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 18px 16px;
-      position: relative;
+      overflow: hidden;
     }
-    .player-card.fastest { border-color: var(--accent); }
+    .player-panel.highlight { border-color: var(--accent); }
 
+    .player-header {
+      padding: 14px 14px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .player-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
     .badge {
-      display: inline-block;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.05em;
-      padding: 3px 8px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 7px;
       border-radius: 20px;
-      margin-bottom: 10px;
     }
-    .badge-gold {
-      background: color-mix(in srgb, var(--accent) 20%, transparent);
-      color: var(--accent);
-      border: 1px solid var(--accent-dim);
-    }
-    .badge-dim {
-      background: var(--surface2);
-      color: var(--text-dim);
-      border: 1px solid var(--border);
-    }
+    .badge-gold { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border: 1px solid var(--accent-dim); }
+    .badge-dim  { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
 
-    .player-card-name {
-      font-size: 17px;
+    .player-name {
+      font-size: 16px;
       font-weight: 700;
-      color: var(--text);
-      margin-bottom: 4px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-
-    .player-card-civ {
-      font-size: 13px;
-      color: var(--text-dim);
-      margin-bottom: 16px;
-    }
-
-    .feudal-block { margin-top: auto; }
-
-    .feudal-label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    .feudal-value {
-      font-size: 32px;
-      font-weight: 800;
-      letter-spacing: -1px;
-      font-variant-numeric: tabular-nums;
-    }
-    .feudal-value.has-time { color: var(--accent); }
-    .feudal-value.no-time  { color: var(--text-dim); font-size: 18px; }
-
-    .result-meta {
+    .player-civ {
       font-size: 12px;
       color: var(--text-dim);
-      text-align: center;
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
-    /* ── Utilities ───────────────────────────── */
+    /* ── Age timing grid ── */
+    .age-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .age-cell {
+      background: var(--surface);
+      padding: 10px 12px;
+    }
+    .age-cell-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 3px;
+    }
+    .age-cell-value {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      font-variant-numeric: tabular-nums;
+    }
+    .age-cell-value.val-feudal { color: var(--accent); }
+    .age-cell-value.val-castle { color: var(--tech); }
+    .age-cell-value.val-none   { color: var(--text-dim); font-size: 15px; font-weight: 400; }
+
+    /* ── Build order list ── */
+    .bo-list {
+      padding: 8px 0;
+      max-height: 340px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .bo-list:empty::after {
+      content: 'No build order recorded';
+      display: block;
+      padding: 14px 14px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .bo-row {
+      display: grid;
+      grid-template-columns: 46px 10px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      font-size: 13px;
+      border-radius: 4px;
+    }
+    .bo-row:hover { background: var(--surface2); }
+    .bo-time {
+      font-variant-numeric: tabular-nums;
+      color: var(--text-dim);
+      font-size: 12px;
+      text-align: right;
+    }
+    .bo-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .bo-dot-age   { background: var(--accent); }
+    .bo-dot-unit  { background: var(--success); }
+    .bo-dot-build { background: var(--build); }
+    .bo-dot-tech  { background: var(--tech); }
+
+    .bo-name { color: var(--text); }
+    .bo-name-age   { color: var(--accent); font-weight: 600; }
+    .bo-name-unit  { }
+    .bo-name-build { color: var(--build); }
+    .bo-name-tech  { color: var(--tech); }
+
+    .bo-amount {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: right;
+    }
+    .bo-amount-unit { color: var(--success); font-weight: 600; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 14px 0 18px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .legend-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    /* ── Utilities ── */
     .hidden { display: none !important; }
 
     @keyframes spin  { to { transform: rotate(360deg); } }
@@ -328,8 +391,8 @@
 <div class="container">
 
   <header>
-    <h1>AoE2 Feudal Timer</h1>
-    <p>Analyze when each player clicked Feudal Age</p>
+    <h1>AoE2 Build Order</h1>
+    <p>Accurate build orders from replay files — spam clicks filtered</p>
   </header>
 
   <!-- Search by username -->
@@ -342,7 +405,7 @@
                autocapitalize="none" autocorrect="off" spellcheck="false">
         <button type="submit" id="search-btn">Fetch &amp; Analyze</button>
       </div>
-      <p class="hint">Fetches most recent 1v1 match · replay URL may not always be available</p>
+      <p class="hint">Fetches most recent 1v1 · replay URL may not always be available</p>
     </form>
   </div>
 
@@ -361,13 +424,13 @@
     </details>
   </div>
 
-  <!-- Loading state -->
+  <!-- Loading -->
   <div id="loading-section" class="hidden">
     <div class="spinner"></div>
     <p id="loading-text">Working…</p>
   </div>
 
-  <!-- Error state -->
+  <!-- Error -->
   <div id="error-section" class="hidden">
     <p id="error-message"></p>
     <button class="btn-secondary" id="error-back-btn">← Try Again</button>
@@ -375,14 +438,23 @@
 
   <!-- Results -->
   <div id="results-section" class="hidden">
-    <h2>Results</h2>
-    <div class="player-cards-grid" id="player-cards"></div>
-    <p class="result-meta" id="result-meta"></p>
-    <button class="btn-secondary" id="again-btn">← Analyze Another</button>
+
+    <div class="match-meta" id="match-meta"></div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> Age-up</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--success)"></div> Unit</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--build)"></div> Building</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--tech)"></div> Tech</div>
+    </div>
+
+    <div class="players-grid" id="players-grid"></div>
+
+    <button class="btn-secondary" id="again-btn" style="margin-top:20px">← Analyze Another</button>
+
   </div>
 
 </div>
-
 <script>
   const CIVS = {
     1:'Britons',2:'Franks',3:'Goths',4:'Teutons',5:'Japanese',
@@ -401,33 +473,30 @@
     'Fetching match data…',
     'Downloading replay…',
     'Parsing replay file…',
-    'Calculating Feudal times…',
+    'Calculating build orders…',
   ];
 
-  // ── DOM refs ──────────────────────────────────────────
   const searchSection  = document.getElementById('search-section');
   const uploadSection  = document.getElementById('upload-section');
   const loadingSection = document.getElementById('loading-section');
   const errorSection   = document.getElementById('error-section');
   const resultsSection = document.getElementById('results-section');
-
-  const usernameInput = document.getElementById('username-input');
-  const searchBtn     = document.getElementById('search-btn');
-  const fileInput     = document.getElementById('file-input');
-  const uploadBtn     = document.getElementById('upload-btn');
-  const uploadDetails = document.getElementById('upload-details');
-  const uploadBanner  = document.getElementById('upload-banner');
-  const loadingText   = document.getElementById('loading-text');
-  const errorMessage  = document.getElementById('error-message');
-  const playerCards   = document.getElementById('player-cards');
-  const resultMeta    = document.getElementById('result-meta');
+  const usernameInput  = document.getElementById('username-input');
+  const searchBtn      = document.getElementById('search-btn');
+  const fileInput      = document.getElementById('file-input');
+  const uploadBtn      = document.getElementById('upload-btn');
+  const uploadDetails  = document.getElementById('upload-details');
+  const uploadBanner   = document.getElementById('upload-banner');
+  const loadingText    = document.getElementById('loading-text');
+  const errorMessage   = document.getElementById('error-message');
+  const playersGrid    = document.getElementById('players-grid');
+  const matchMeta      = document.getElementById('match-meta');
 
   document.getElementById('error-back-btn').addEventListener('click', showHome);
   document.getElementById('again-btn').addEventListener('click', showHome);
   document.getElementById('search-form').addEventListener('submit', handleSearch);
   uploadBtn.addEventListener('click', handleUpload);
 
-  // ── UI helpers ────────────────────────────────────────
   function hideAll() {
     [searchSection, uploadSection, loadingSection, errorSection, resultsSection]
       .forEach(el => el.classList.add('hidden'));
@@ -468,7 +537,6 @@
     errorSection.classList.remove('hidden');
   }
 
-  // ── Handlers ──────────────────────────────────────────
   async function handleSearch(e) {
     e.preventDefault();
     const username = usernameInput.value.trim();
@@ -477,9 +545,7 @@
       usernameInput.addEventListener('animationend', () => usernameInput.classList.remove('shake'), {once:true});
       return;
     }
-
     startLoading();
-
     let data;
     try {
       const resp = await fetch('/api/search', {
@@ -492,15 +558,13 @@
       showError('Network error — make sure the server is running.');
       return;
     }
-
     stopLoading();
-
     if (data.error === 'no_replay_url') {
       hideAll();
       searchSection.classList.remove('hidden');
       uploadSection.classList.remove('hidden');
       uploadDetails.setAttribute('open', '');
-      uploadBanner.textContent = data.message || 'Match found, but no replay URL available. Upload the file manually.';
+      uploadBanner.textContent = data.message || 'Match found, but no replay URL is available. Upload the file manually.';
       uploadBanner.classList.remove('hidden');
     } else if (data.error) {
       showError(data.detail ? `${data.error}: ${data.detail}` : data.error);
@@ -516,13 +580,10 @@
       setTimeout(() => fileInput.style.borderColor = '', 1500);
       return;
     }
-
     startLoading();
     loadingText.textContent = 'Uploading and parsing…';
-
     const form = new FormData();
     form.append('file', file);
-
     let data;
     try {
       const resp = await fetch('/api/upload', {method:'POST', body:form});
@@ -531,9 +592,7 @@
       showError('Network error — make sure the server is running.');
       return;
     }
-
     stopLoading();
-
     if (data.error) {
       showError(data.detail ? `${data.error}: ${data.detail}` : data.error);
     } else {
@@ -541,52 +600,120 @@
     }
   }
 
-  // ── Results rendering ─────────────────────────────────
   function renderResults(data) {
     hideAll();
 
+    // Match meta bar
+    const parts = [];
+    if (data.map_name) parts.push(`🗺 ${esc(data.map_name)}`);
+    if (data.speed)    parts.push(`⚡ ${esc(data.speed)}`);
+    if (data.duration) parts.push(`⏱ ${esc(fmtDuration(data.duration))}`);
+    matchMeta.innerHTML = parts.map(p => `<span>${p}</span>`).join('');
+
     const players = data.players || [];
-    playerCards.innerHTML = '';
+    playersGrid.innerHTML = '';
+
+    // Fastest feudal = first player with feudal_clicked (already sorted by server)
+    const fastestIdx = players.findIndex(p => p.feudal_clicked);
 
     players.forEach((p, idx) => {
-      const isFastest = idx === 0 && p.feudal_clicked;
-      const civName   = CIVS[p.civilization_id] || (p.civilization_id ? `Civ #${p.civilization_id}` : 'Unknown civ');
+      const isFastest = idx === fastestIdx && p.feudal_clicked;
+      const civName   = p.civilization || CIVS[p.civilization_id] || (p.civilization_id ? `Civ #${p.civilization_id}` : '');
 
-      const card = document.createElement('div');
-      card.className = 'player-card' + (isFastest ? ' fastest' : '');
+      const panel = document.createElement('div');
+      panel.className = 'player-panel' + (isFastest ? ' highlight' : '');
 
-      const badgeClass = isFastest ? 'badge badge-gold' : 'badge badge-dim';
-      const badgeText  = isFastest ? '⚡ Faster Feudal' : (p.feudal_clicked ? 'Feudal reached' : 'Did not Feudal');
+      // Header
+      const badgeHtml = isFastest
+        ? `<span class="badge badge-gold">⚡ Faster Feudal</span>`
+        : `<span class="badge badge-dim">${p.feudal_clicked ? 'Feudal reached' : 'No feudal data'}</span>`;
 
-      const timeClass  = p.feudal_clicked ? 'feudal-value has-time' : 'feudal-value no-time';
-      const timeText   = p.feudal_time_formatted || '—';
+      // Age timing cells: feudal click, feudal done, castle click, castle done
+      const fClickVal  = ageCellVal(p.feudal_click_str,  'val-feudal');
+      const fDoneVal   = ageCellVal(p.feudal_done_str,   'val-feudal');
+      const cClickVal  = ageCellVal(p.castle_click_str,  'val-castle');
+      const cDoneVal   = ageCellVal(p.castle_done_str,   'val-castle');
 
-      card.innerHTML = `
-        <span class="${badgeClass}">${badgeText}</span>
-        <div class="player-card-name" title="${esc(p.name)}">${esc(p.name)}</div>
-        <div class="player-card-civ">${esc(civName)}</div>
-        <div class="feudal-block">
-          <span class="feudal-label">Feudal Age</span>
-          <div class="${timeClass}">${esc(timeText)}</div>
+      // Build order rows
+      const boHtml = buildOrderHtml(p.build_order || []);
+
+      panel.innerHTML = `
+        <div class="player-header">
+          <div class="player-badge-row">${badgeHtml}</div>
+          <div class="player-name" title="${esc(p.name)}">${esc(p.name)}</div>
+          <div class="player-civ">${esc(civName)}</div>
         </div>
+        <div class="age-grid">
+          <div class="age-cell">
+            <div class="age-cell-label">Feudal Click</div>
+            <div class="age-cell-value ${p.feudal_clicked ? 'val-feudal' : 'val-none'}">${fClickVal}</div>
+          </div>
+          <div class="age-cell">
+            <div class="age-cell-label">Feudal Done</div>
+            <div class="age-cell-value ${p.feudal_done_str ? 'val-feudal' : 'val-none'}">${fDoneVal}</div>
+          </div>
+          <div class="age-cell">
+            <div class="age-cell-label">Castle Click</div>
+            <div class="age-cell-value ${p.castle_clicked ? 'val-castle' : 'val-none'}">${cClickVal}</div>
+          </div>
+          <div class="age-cell">
+            <div class="age-cell-label">Castle Done</div>
+            <div class="age-cell-value ${p.castle_done_str ? 'val-castle' : 'val-none'}">${cDoneVal}</div>
+          </div>
+        </div>
+        <div class="bo-list">${boHtml}</div>
       `;
 
-      playerCards.appendChild(card);
+      playersGrid.appendChild(panel);
     });
 
-    resultMeta.textContent = `Version: ${data.version || 'unknown'}`;
     resultsSection.classList.remove('hidden');
   }
 
+  function ageCellVal(str, cls) {
+    return str || '—';
+  }
+
+  function buildOrderHtml(bo) {
+    if (!bo.length) return '';
+    return bo.map(item => {
+      const t = item.type || 'unit';
+      const dotClass  = `bo-dot bo-dot-${t}`;
+      const nameClass = `bo-name bo-name-${t}`;
+      const amtHtml   = (item.amount > 1 || t === 'unit')
+        ? `<span class="bo-amount ${t === 'unit' ? 'bo-amount-unit' : ''}">×${item.amount}</span>`
+        : `<span class="bo-amount"></span>`;
+      return `<div class="bo-row">
+        <span class="bo-time">${esc(item.time_str || '')}</span>
+        <span class="${dotClass}"></span>
+        <span class="${nameClass}">${esc(item.name || '')}</span>
+        ${amtHtml}
+      </div>`;
+    }).join('');
+  }
+
+  function fmtDuration(dur) {
+    // dur is a timedelta string like "0:11:23" or "1:02:10"
+    if (!dur) return '';
+    const parts = dur.split(':');
+    if (parts.length === 3) {
+      const h = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const s = parseInt(parts[2], 10);
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m ${s}s`;
+    }
+    return dur;
+  }
+
   function esc(str) {
-    return String(str)
+    return String(str ?? '')
       .replace(/&/g,'&amp;')
       .replace(/</g,'&lt;')
       .replace(/>/g,'&gt;')
       .replace(/"/g,'&quot;');
   }
 
-  // Start in home view
   showHome();
 </script>
 </body>
