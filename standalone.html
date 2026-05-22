@@ -417,6 +417,28 @@ const TRAIN_MS = {
   40:75000, 46:60000,                                    // unique heavies
 };
 
+// food, wood, gold, stone
+const UNIT_COSTS = {
+  83:[50,0,0,0], 74:[60,0,0,0], 75:[60,0,0,0], 77:[60,20,0,0], 567:[60,20,0,0],
+  93:[60,0,0,0], 358:[75,0,0,0], 359:[75,0,0,0],
+  448:[80,0,0,0], 37:[80,0,0,0], 441:[80,0,0,0],
+  38:[80,0,0,0], 283:[80,0,0,0], 569:[80,0,0,0],
+  4:[45,25,0,0], 24:[40,25,0,0], 492:[40,25,0,0],
+  7:[35,0,0,0], 6:[35,0,0,0], 8:[45,25,0,0],
+  751:[40,0,0,0], 753:[40,0,0,0],
+  125:[0,0,100,50], 13:[75,0,0,0], 17:[100,0,0,0], 128:[80,0,0,0],
+  35:[160,0,0,0], 422:[160,0,0,0], 280:[160,0,0,0], 279:[100,0,0,0],
+};
+const BUILDING_COSTS = {
+  70:[0,30,0,0], 12:[0,100,0,50], 10:[0,100,0,50], 86:[0,100,0,50],
+  50:[0,75,0,0], 18:[0,100,0,0], 562:[0,100,0,0], 584:[0,100,0,0],
+  30:[0,100,0,0], 84:[0,100,0,0], 68:[0,75,0,0], 45:[0,100,0,0],
+  71:[0,200,0,0], 82:[0,200,0,200], 598:[0,0,0,0],
+};
+const TECH_COSTS = {
+  101:[500,0,0,0], 102:[800,0,200,0], 103:[1000,0,400,0],
+};
+
 const LOADING_MSGS = ['Reading file…','Parsing header…','Scanning operations…','Building order…'];
 
 // ── UI refs ───────────────────────────────────────────────────────────────────
@@ -596,22 +618,57 @@ function parseOps(view, bytes, start, size) {
   let offset = start;
   let timeMs = 0;
   const feudalTimes  = {};  // player_id -> ms
+  const feudalPops   = {};  // player_id -> "pop/cap" string at feudal click
   const castleTimes  = {};  // player_id -> ms
   const buildOrders  = {};  // player_id -> [{time_ms, type, id, name, amount}]
+
   // Per-building production queue: pid -> buildingKey -> sorted array of unit finish times
   const bQueues = {};
 
+  // Resource state per player: food, wood, gold, stone, lastTime, vills (total gatherers)
+  // Start: 200 food, 200 wood, 3 starting villagers assumed gathering
+  const res = {};
+  // Population per player: pop (units alive), cap (from TC + houses)
+  const pop = {};
+
+  function initPlayer(pid) {
+    if (!res[pid]) {
+      res[pid] = { food: 200, wood: 200, gold: 0, stone: 0, lastTime: 0, vills: 3 };
+      pop[pid] = { pop: 3, cap: 5 };  // 3 starting vills, 1 TC = 5 cap
+    }
+  }
+
+  function advanceRes(pid, toMs) {
+    const r = res[pid];
+    const dt = toMs - r.lastTime;
+    if (dt <= 0) return;
+    // Simplified gather: vills split ~60% food / 40% wood at base rates
+    // 20 food/min/vill, 18 wood/min/vill  → /60000 ms
+    r.food += r.vills * 0.6 * 20 / 60000 * dt;
+    r.wood += r.vills * 0.4 * 18 / 60000 * dt;
+    r.lastTime = toMs;
+  }
+
+  function canAfford(pid, cost, n) {
+    const r = res[pid];
+    return r.food >= cost[0]*n && r.wood >= cost[1]*n && r.gold >= cost[2]*n && r.stone >= cost[3]*n;
+  }
+
+  function spend(pid, cost, n) {
+    const r = res[pid];
+    r.food  = Math.max(0, r.food  - cost[0]*n);
+    r.wood  = Math.max(0, r.wood  - cost[1]*n);
+    r.gold  = Math.max(0, r.gold  - cost[2]*n);
+    r.stone = Math.max(0, r.stone - cost[3]*n);
+  }
+
   // Returns how many units were actually accepted into the queue (0 = full, spam rejected).
-  // Mutates bQueues in place.
   function tryQueue(pid, bKey, unitId, wantAmount, now) {
     if (!bQueues[pid]) bQueues[pid] = {};
     if (!bQueues[pid][bKey]) bQueues[pid][bKey] = [];
     const q = bQueues[pid][bKey];
     const trainMs = TRAIN_MS[unitId] || 32000;
-
-    // Evict finished slots
     while (q.length > 0 && q[0] <= now) q.shift();
-
     const slots = 10 - q.length;
     if (slots <= 0) return 0;
     const actual = Math.min(wantAmount, slots);
@@ -652,100 +709,118 @@ function parseOps(view, bytes, start, size) {
           let pid, tech_id;
           if (isDE71094) {
             pid     = view.getInt8(abStart);
-            tech_id = view.getInt16(abStart + 9, true);   // raw[6..7] = abStart[9..10]
+            tech_id = view.getInt16(abStart + 9, true);
           } else {
             pid     = view.getInt16(abStart + 7, true);
             tech_id = abLen >= 19 ? view.getUint32(abStart + 11, true)
                                   : view.getInt16(abStart + 9,  true);
           }
           if (pid > 0 && pid <= 8 && tech_id > 0) {
+            initPlayer(pid);
+            advanceRes(pid, timeMs);
             const beforeCastle = !(pid in castleTimes);
-            if (beforeCastle) {
+            const cost = TECH_COSTS[tech_id] || [300,0,0,0];
+            if (beforeCastle && canAfford(pid, cost, 1)) {
+              spend(pid, cost, 1);
               const isAge = tech_id === 101 || tech_id === 102 || tech_id === 103;
               add(pid, {
-                time_ms: timeMs,
-                type:    isAge ? 'age' : 'tech',
-                id:      tech_id,
-                name:    TECHS[tech_id] || `Tech #${tech_id}`,
-                amount:  1,
+                time_ms: timeMs, type: isAge ? 'age' : 'tech',
+                id: tech_id, name: TECHS[tech_id] || `Tech #${tech_id}`, amount: 1,
               });
+              if (tech_id === 101 && !(pid in feudalTimes)) {
+                feudalTimes[pid] = timeMs;
+                feudalPops[pid]  = `${pop[pid].pop}/${pop[pid].cap}`;
+              }
+              if (tech_id === 102 && !(pid in castleTimes)) castleTimes[pid] = timeMs;
+            } else if (!beforeCastle) {
+              // still record age-up click times even if we're past castle
+              if (tech_id === 101 && !(pid in feudalTimes)) {
+                feudalTimes[pid] = timeMs;
+                feudalPops[pid]  = `${pop[pid].pop}/${pop[pid].cap}`;
+              }
+              if (tech_id === 102 && !(pid in castleTimes)) castleTimes[pid] = timeMs;
             }
-            if (tech_id === 101 && !(pid in feudalTimes)) feudalTimes[pid] = timeMs;
-            if (tech_id === 102 && !(pid in castleTimes)) castleTimes[pid] = timeMs;
           }
         }
 
         // ── BUILD (0x66) — DE-71094 only ──
-        // raw format: <h2xffI8xhbb>  building_id at raw[12..15] = abStart[15..18]
         else if (actionId === 0x66 && isDE71094 && abLen >= 19) {
           const pid = view.getInt8(abStart);
           if (pid > 0 && pid <= 8 && !(pid in castleTimes)) {
+            initPlayer(pid);
+            advanceRes(pid, timeMs);
             const building_id = view.getUint32(abStart + 15, true);
             if (building_id > 0 && building_id < 5000) {
-              add(pid, {
-                time_ms: timeMs,
-                type:    'building',
-                id:      building_id,
-                name:    BUILDINGS[building_id] || `Building #${building_id}`,
-                amount:  1,
-              });
+              const cost = BUILDING_COSTS[building_id] || [0,75,0,0];
+              if (canAfford(pid, cost, 1)) {
+                spend(pid, cost, 1);
+                if (building_id === 70) pop[pid].cap += 5;  // House: +5 pop cap
+                add(pid, {
+                  time_ms: timeMs, type: 'building',
+                  id: building_id, name: BUILDINGS[building_id] || `Building #${building_id}`, amount: 1,
+                });
+              }
             }
           }
         }
 
         // ── DE_QUEUE (0x81) — DE-71094 only ──
-        // raw: <h4xhhh4x[selected×I]>
-        //   selected at abStart+3, unit_id at abStart+11, amount at abStart+13
-        //   building instance IDs at abStart+19, abStart+23, …
         else if (actionId === 0x81 && isDE71094 && abLen >= 16) {
           const pid = view.getInt8(abStart);
           if (pid > 0 && pid <= 8 && !(pid in castleTimes)) {
+            initPlayer(pid);
+            advanceRes(pid, timeMs);
             const selected = Math.max(0, view.getInt16(abStart + 3, true));
             const unit_id  = view.getInt16(abStart + 11, true);
             const want     = Math.max(1, view.getInt16(abStart + 13, true));
             if (unit_id > 0 && unit_id < 3000) {
-              // Queue `want` units into each selected building; spam clicks rejected
-              // when that building's queue is full (>= 10 slots occupied).
-              let totalActual = 0;
-              const nBuildings = selected > 0 ? selected : 1;
-              for (let bi = 0; bi < nBuildings; bi++) {
-                const bOff = abStart + 19 + bi * 4;
-                const bKey = (selected > 0 && bOff + 4 <= offset + length)
-                  ? view.getUint32(bOff, true)
-                  : (pid * 100 + bi);  // fallback: synthetic key per player
-                totalActual += tryQueue(pid, bKey, unit_id, want, timeMs);
-              }
-              if (totalActual > 0) {
-                add(pid, {
-                  time_ms: timeMs,
-                  type:    'unit',
-                  id:      unit_id,
-                  name:    UNITS[unit_id] || `Unit #${unit_id}`,
-                  amount:  totalActual,
-                });
+              const cost = UNIT_COSTS[unit_id] || [60,0,0,0];
+              if (canAfford(pid, cost, want) && pop[pid].pop < pop[pid].cap) {
+                let totalActual = 0;
+                const nBuildings = selected > 0 ? selected : 1;
+                for (let bi = 0; bi < nBuildings; bi++) {
+                  const bOff = abStart + 19 + bi * 4;
+                  const bKey = (selected > 0 && bOff + 4 <= offset + length)
+                    ? view.getUint32(bOff, true)
+                    : (pid * 100 + bi);
+                  totalActual += tryQueue(pid, bKey, unit_id, want, timeMs);
+                }
+                if (totalActual > 0) {
+                  spend(pid, cost, totalActual);
+                  pop[pid].pop += totalActual;
+                  if (unit_id === 83) res[pid].vills += totalActual;  // new vills gather
+                  add(pid, {
+                    time_ms: timeMs, type: 'unit',
+                    id: unit_id, name: UNITS[unit_id] || `Unit #${unit_id}`, amount: totalActual,
+                  });
+                }
               }
             }
           }
         }
 
         // ── MAKE (0x64) — DE-71094 only ──
-        // raw: <H6xh>  building_type at abStart+3, unit_id at abStart+11
         else if (actionId === 0x64 && isDE71094 && abLen >= 13) {
           const pid = view.getInt8(abStart);
           if (pid > 0 && pid <= 8 && !(pid in castleTimes)) {
-            const bType   = view.getUint16(abStart + 3, true);  // building type as queue key
+            initPlayer(pid);
+            advanceRes(pid, timeMs);
+            const bType   = view.getUint16(abStart + 3, true);
             const unit_id = view.getInt16(abStart + 11, true);
             if (unit_id > 0 && unit_id < 3000) {
-              const bKey   = pid * 10000 + bType;  // per-player per-building-type key
-              const actual = tryQueue(pid, bKey, unit_id, 1, timeMs);
-              if (actual > 0) {
-                add(pid, {
-                  time_ms: timeMs,
-                  type:    'unit',
-                  id:      unit_id,
-                  name:    UNITS[unit_id] || `Unit #${unit_id}`,
-                  amount:  1,
-                });
+              const cost = UNIT_COSTS[unit_id] || [60,0,0,0];
+              if (canAfford(pid, cost, 1) && pop[pid].pop < pop[pid].cap) {
+                const bKey   = pid * 10000 + bType;
+                const actual = tryQueue(pid, bKey, unit_id, 1, timeMs);
+                if (actual > 0) {
+                  spend(pid, cost, actual);
+                  pop[pid].pop += actual;
+                  if (unit_id === 83) res[pid].vills += actual;
+                  add(pid, {
+                    time_ms: timeMs, type: 'unit',
+                    id: unit_id, name: UNITS[unit_id] || `Unit #${unit_id}`, amount: 1,
+                  });
+                }
               }
             }
           }
@@ -783,7 +858,7 @@ function parseOps(view, bytes, start, size) {
     }
   }
 
-  return { feudalTimes, castleTimes, buildOrders };
+  return { feudalTimes, feudalPops, castleTimes, buildOrders };
 }
 
 // ── Player info from compressed header ───────────────────────────────────────
@@ -833,7 +908,7 @@ async function extractPlayerInfo(compressed) {
 }
 
 // ── Result builder ────────────────────────────────────────────────────────────
-function buildResult(players, { feudalTimes, castleTimes, buildOrders }) {
+function buildResult(players, { feudalTimes, feudalPops, castleTimes, buildOrders }) {
   const allPids = [...new Set([
     ...Object.keys(feudalTimes).map(Number),
     ...Object.keys(buildOrders).map(Number),
@@ -851,6 +926,7 @@ function buildResult(players, { feudalTimes, castleTimes, buildOrders }) {
       feudal_time_ms:       feudalTimes[pid] ?? null,
       feudal_time_formatted:feudalTimes[pid] != null ? msToMMSS(feudalTimes[pid]) : null,
       feudal_clicked:       pid in feudalTimes,
+      feudal_pop:           feudalPops[pid] ?? null,
       castle_time_ms:       castleTimes[pid] ?? null,
       castle_time_formatted:castleTimes[pid] != null ? msToMMSS(castleTimes[pid]) : null,
       castle_clicked:       pid in castleTimes,
@@ -917,7 +993,7 @@ function renderResults(data) {
       ${civName ? `<div class="player-civ">${esc(civName)}</div>` : '<div class="player-civ">&nbsp;</div>'}
       <div class="age-times">
         <div class="age-time-col">
-          <span class="age-label">Feudal</span>
+          <span class="age-label">Feudal${p.feudal_pop ? ` <span style="font-weight:400;font-size:10px;text-transform:none;letter-spacing:0;color:var(--text-dim)">${esc(p.feudal_pop)} pop</span>` : ''}</span>
           <div class="age-value ${p.feudal_clicked ? 'has-time' : 'no-time'}">${p.feudal_time_formatted || '—'}</div>
         </div>
         <div class="age-time-col">
