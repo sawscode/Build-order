@@ -646,7 +646,10 @@
         <div class="age-grid">
           <div class="age-cell">
             <div class="age-cell-label">Feudal Click</div>
-            <div class="age-cell-value ${p.feudal_clicked ? 'val-feudal' : 'val-none'}">${fClickVal}</div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <div class="age-cell-value ${p.feudal_clicked ? 'val-feudal' : 'val-none'}">${fClickVal}</div>
+              <div style="font-size:11px;color:var(--text-dim)">${esc(p.feudal_pop || '?/?')}</div>
+            </div>
           </div>
           <div class="age-cell">
             <div class="age-cell-label">Feudal Done</div>
