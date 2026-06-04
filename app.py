@@ -48,6 +48,42 @@ TRAIN_MS = {
 }
 QUEUE_MAX = 10
 
+TC_OBJECT_IDS = {71, 109, 141, 142}  # Town Center variants
+
+
+def infer_gather_resource(param):
+    """Map GAIA object name → resource type from a Gather input."""
+    if not param:
+        return None
+    p = param.lower()
+    if any(x in p for x in ['sheep', 'deer', 'boar', 'forage', 'berry',
+                              'farm', 'fish', 'tuna', 'marlin', 'salmon',
+                              'perch', 'dorado', 'carp', 'shore', 'hunt']):
+        return 'food'
+    if any(x in p for x in ['tree', 'pine', 'oak', 'jungle', 'bamboo',
+                              'palm', 'stump', 'birch', 'spruce', 'acacia',
+                              'mangrove', 'snow pine', 'dead tree']):
+        return 'wood'
+    if 'gold' in p:
+        return 'gold'
+    if 'stone' in p:
+        return 'stone'
+    return None
+
+
+def infer_target_resource(param):
+    """Map building name → resource type from a Target input (dropoff/farm)."""
+    if not param:
+        return None
+    p = param.lower()
+    if 'farm' in p or 'mill' in p:
+        return 'food'
+    if 'lumber' in p:
+        return 'wood'
+    if 'mining' in p:
+        return 'gold'
+    return None
+
 # Unit costs: (food, wood, gold, stone)
 UNIT_COSTS = {
     83: (50, 0, 0, 0),      # Villager
@@ -231,36 +267,13 @@ def ms_to_mmss(ms):
     return f"{s // 60}:{s % 60:02d}"
 
 
-def infer_gather_type(param_name):
-    """Infer resource type from Gather action parameter name."""
-    if not param_name:
-        return None
-    p = param_name.lower()
-    if 'tree' in p or 'forester' in p:
-        return 'wood'
-    if 'gold' in p or 'gold mine' in p:
-        return 'gold'
-    if 'stone' in p or 'quarry' in p or 'stone mine' in p:
-        return 'stone'
-    if any(x in p for x in ['farm', 'forage', 'berry', 'deer', 'boar', 'sheep', 'hunt', 'fish']):
-        return 'food'
-    return None
-
-
 def parse_replay(record_bytes):
-    """
-    Parse replay with full game state simulation:
-    - Resource tracking per food/wood/gold/stone
-    - Population tracking for unit training
-    - Affordability checks for queue/build/research actions
-    - Accurate age-up times from game engine
-    """
     handle = io.BytesIO(record_bytes)
     match = parse_match(handle)
 
     speed_mult = (match.speed_id or 100) / 100.0
 
-    # Age-up completion times from game engine
+    # Age-up completion times from game engine (CHAT uptimes = actual outcomes)
     age_completions = {}
     for uptime in match.uptimes:
         if not uptime.player:
@@ -272,15 +285,35 @@ def parse_replay(record_bytes):
         av = uptime.age.value if hasattr(uptime.age, 'value') else int(uptime.age)
         age_completions[pid][av] = ms
 
-    # Initialize resource and population states
     resource_states = {}
     population_states = {}
-    for p in match.players:
-        resource_states[p.number] = ResourceState(speed_mult=speed_mult)
-        resource_states[p.number].set_timeseries(p)
-        population_states[p.number] = PopulationState()
+    villager_tasks = {}   # {pid: {instance_id: resource_type}}
+    tc_instance_ids = {}  # {pid: set of TC instance IDs}
+    tc_queue_log = {}     # {pid: [(start_ms, finish_ms), ...]}
 
-    # Per-building production queue state
+    for p in match.players:
+        pid = p.number
+        resource_states[pid] = ResourceState(speed_mult=speed_mult)
+        try:
+            resource_states[pid].set_timeseries(p)
+        except Exception:
+            pass
+        population_states[pid] = PopulationState()
+        villager_tasks[pid] = {}
+        tc_instance_ids[pid] = set()
+        tc_queue_log[pid] = []
+
+        # Seed starting villagers and TC instance IDs from player objects
+        for obj in getattr(p, 'objects', []):
+            obj_id = getattr(obj, 'object_id', None)
+            inst_id = getattr(obj, 'instance_id', None)
+            if inst_id is None:
+                inst_id = getattr(obj, 'id', None)
+            if obj_id == 83 and inst_id is not None:
+                villager_tasks[pid][inst_id] = 'food'
+            if obj_id in TC_OBJECT_IDS and inst_id is not None:
+                tc_instance_ids[pid].add(inst_id)
+
     bqueues = {}
 
     def try_queue(pid, bkey, unit_id, amount, now_ms):
@@ -302,6 +335,28 @@ def parse_replay(record_bytes):
             q.append(prev + train_ms)
         return actual
 
+    def _sync_rates(pid):
+        """Sync ResourceState gather rates from villager_tasks assignments."""
+        res = resource_states[pid]
+        vt = villager_tasks[pid]
+        res.food_villagers  = sum(1 for r in vt.values() if r == 'food')
+        res.wood_villagers  = sum(1 for r in vt.values() if r == 'wood')
+        res.gold_villagers  = sum(1 for r in vt.values() if r == 'gold')
+        res.stone_villagers = sum(1 for r in vt.values() if r == 'stone')
+
+    def snap(pid):
+        """Snapshot of villager assignments + population at this moment."""
+        vt = villager_tasks[pid]
+        pop = population_states[pid]
+        return {
+            'food_vils':  sum(1 for r in vt.values() if r == 'food'),
+            'wood_vils':  sum(1 for r in vt.values() if r == 'wood'),
+            'gold_vils':  sum(1 for r in vt.values() if r == 'gold'),
+            'stone_vils': sum(1 for r in vt.values() if r == 'stone'),
+            'pop':        pop.pop,
+            'pop_cap':    pop.pop_cap,
+        }
+
     feudal_click = {}
     feudal_pop = {}
     castle_click = {}
@@ -317,33 +372,59 @@ def parse_replay(record_bytes):
         time_ms = int(inp.timestamp.total_seconds() * 1000)
         before_castle = pid not in castle_click
 
-        # Advance resource and population state to this time
         res = resource_states[pid]
         pop = population_states[pid]
         res.advance_to(time_ms)
 
-        # ── Gather (villager assignment) ──────────────────────────────────
+        # ── Gather: villager resource assignment ──────────────────────────
         if inp.type == 'Gather':
-            gather_type = infer_gather_type(inp.param)
-            if gather_type:
-                res.add_villager_gather(gather_type)
+            resource = infer_gather_resource(inp.param)
+            object_ids = inp.payload.get('object_ids') or []
+            if resource and object_ids:
+                for vid in object_ids:
+                    villager_tasks[pid][vid] = resource
+                _sync_rates(pid)
+                n = len(object_ids)
+                build_orders[pid].append({
+                    'time_ms':  time_ms,
+                    'time_str': ms_to_mmss(time_ms),
+                    'type':     'gather',
+                    'name':     f"{n} vil{'s' if n > 1 else ''} → {inp.param or resource}",
+                    'amount':   n,
+                    **snap(pid),
+                })
 
-        # ── Unit training ─────────────────────────────────────────────────
+        # ── Target: villager sent to dropoff building / farm ──────────────
+        elif inp.type == 'Target':
+            resource = infer_target_resource(inp.param)
+            object_ids = inp.payload.get('object_ids') or []
+            if resource and object_ids:
+                for vid in object_ids:
+                    villager_tasks[pid][vid] = resource
+                _sync_rates(pid)
+
+        # ── Queue: unit training ──────────────────────────────────────────
         elif inp.type == 'Queue' and before_castle:
             unit_name = inp.param
-            unit_id = inp.payload.get('unit_id')
-            amount = inp.payload.get('amount') or 1
+            unit_id   = inp.payload.get('unit_id')
+            amount    = inp.payload.get('amount') or 1
             object_ids = inp.payload.get('object_ids') or []
             bkeys = object_ids if object_ids else [f'p{pid}_0']
 
-            # Check affordability
             cost = UNIT_COSTS.get(unit_id, (50, 0, 0, 0))
-            total_cost = (cost[0] * amount, cost[1] * amount, cost[2] * amount, cost[3] * amount)
+            total_cost = tuple(c * amount for c in cost)
 
             total = 0
             if res.can_afford(*total_cost) and pop.can_train():
-                for bkey in bkeys:
-                    total += try_queue(pid, bkey, unit_id, amount, time_ms)
+                for bk in bkeys:
+                    n_queued = try_queue(pid, bk, unit_id, amount, time_ms)
+                    total += n_queued
+                    # TC idle time: log each villager training window
+                    if n_queued > 0 and unit_id == 83 and bk in tc_instance_ids[pid]:
+                        q = bqueues[pid][bk]
+                        train_adj = int(TRAIN_MS[83] / speed_mult)
+                        for ft in q[-n_queued:]:
+                            tc_queue_log[pid].append((ft - train_adj, ft))
 
             if total > 0 and (unit_name or unit_id):
                 res.spend(*total_cost)
@@ -355,18 +436,17 @@ def parse_replay(record_bytes):
                     'type':     'unit',
                     'name':     unit_name or f'Unit #{unit_id}',
                     'amount':   total,
+                    **snap(pid),
                 })
 
-        # ── Building placement ────────────────────────────────────────────
+        # ── Build / Reseed ────────────────────────────────────────────────
         elif inp.type in ('Build', 'Reseed') and before_castle:
             name = inp.param
             if name:
-                # Check affordability
                 building_id = inp.payload.get('building_id')
                 cost = BUILDING_COSTS.get(building_id, (0, 75, 0, 0))
                 if res.can_afford(*cost):
                     res.spend(*cost)
-                    # Track houses for pop cap
                     if building_id == 70:
                         pop.add_house()
                     build_orders[pid].append({
@@ -375,16 +455,16 @@ def parse_replay(record_bytes):
                         'type':     'building',
                         'name':     'Reseed Farm' if inp.type == 'Reseed' else name,
                         'amount':   1,
+                        **snap(pid),
                     })
 
-        # ── Technology research ───────────────────────────────────────────
+        # ── Research / Age-up ─────────────────────────────────────────────
         elif inp.type == 'Research' and before_castle:
             tech_name = inp.param
-            tech_id = inp.payload.get('technology_id')
-            is_age = tech_id in (101, 102, 103)
+            tech_id   = inp.payload.get('technology_id')
+            is_age    = tech_id in (101, 102, 103)
 
-            # Check affordability
-            cost = TECH_COSTS.get(tech_id, (500, 0, 0, 0))
+            cost = TECH_COSTS.get(tech_id, (0, 0, 0, 0))
             if res.can_afford(*cost):
                 res.spend(*cost)
                 if tech_name or tech_id:
@@ -394,6 +474,7 @@ def parse_replay(record_bytes):
                         'type':     'age' if is_age else 'tech',
                         'name':     tech_name or f'Tech #{tech_id}',
                         'amount':   1,
+                        **snap(pid),
                     })
 
                 if tech_id == 101 and pid not in feudal_click:
@@ -402,22 +483,45 @@ def parse_replay(record_bytes):
                 if tech_id == 102 and pid not in castle_click:
                     castle_click[pid] = time_ms
 
+    # ── TC idle time (merge-intervals) ────────────────────────────────────
+    def calc_tc_idle(intervals, end_ms):
+        if not intervals:
+            return end_ms
+        intervals = sorted(intervals)
+        cs, ce = intervals[0]
+        merged = []
+        for s, e in intervals[1:]:
+            if s <= ce:
+                ce = max(ce, e)
+            else:
+                merged.append((cs, ce))
+                cs, ce = s, e
+        merged.append((cs, ce))
+        idle = merged[0][0]  # time before first production
+        for i in range(1, len(merged)):
+            idle += merged[i][0] - merged[i - 1][1]
+        idle += max(0, end_ms - merged[-1][1])
+        return idle
+
     players_out = []
     for p in match.players:
         pid = p.number
         comp = age_completions.get(pid, {})
-        feudal_done_ms = comp.get(2) or comp.get(AgeEnum.FEUDAL_AGE.value
-                                                   if hasattr(AgeEnum, 'FEUDAL_AGE') else 2)
-        castle_done_ms = comp.get(3) or comp.get(AgeEnum.CASTLE_AGE.value
-                                                   if hasattr(AgeEnum, 'CASTLE_AGE') else 3)
+        feudal_done_ms = comp.get(2) or comp.get(
+            AgeEnum.FEUDAL_AGE.value if hasattr(AgeEnum, 'FEUDAL_AGE') else 2)
+        castle_done_ms = comp.get(3) or comp.get(
+            AgeEnum.CASTLE_AGE.value if hasattr(AgeEnum, 'CASTLE_AGE') else 3)
         fclick = feudal_click.get(pid)
         cclick = castle_click.get(pid)
+        end_ms = fclick or 600000
+
+        tc_idle_ms = calc_tc_idle(tc_queue_log.get(pid, []), end_ms)
 
         players_out.append({
-            'player_number':   pid,
-            'name':            p.name,
-            'civilization':    p.civilization,
-            'civilization_id': p.civilization_id,
+            'player_number':    pid,
+            'name':             p.name,
+            'civilization':     p.civilization,
+            'civilization_id':  p.civilization_id,
             'feudal_click_ms':  fclick,
             'feudal_click_str': ms_to_mmss(fclick),
             'feudal_clicked':   fclick is not None,
@@ -429,6 +533,8 @@ def parse_replay(record_bytes):
             'castle_clicked':   cclick is not None,
             'castle_done_ms':   castle_done_ms,
             'castle_done_str':  ms_to_mmss(castle_done_ms),
+            'tc_idle_ms':       tc_idle_ms,
+            'tc_idle_str':      ms_to_mmss(tc_idle_ms),
             'build_order':      build_orders.get(pid, []),
         })
 
