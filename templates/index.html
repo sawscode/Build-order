@@ -728,30 +728,30 @@
       <span style="text-align:right">Time</span>
       <span></span>
       <span>Event</span>
-      <span style="color:#c89648;text-align:center">F</span>
-      <span style="color:#5ce07a;text-align:center">W</span>
-      <span style="color:#f0d060;text-align:center">G</span>
-      <span style="color:#aaaaaa;text-align:center">S</span>
+      <span style="color:#c89648;text-align:center" title="Food">F</span>
+      <span style="color:#5ce07a;text-align:center" title="Wood">W</span>
+      <span style="color:#f0d060;text-align:center" title="Gold">G</span>
+      <span style="color:#aaaaaa;text-align:center" title="Stone">S</span>
       <span style="text-align:center">Pop</span>
     </div>`;
     const rows = bo.map(item => {
       const t = item.type || 'unit';
       const dotClass  = `bo-dot bo-dot-${t}`;
       const nameClass = `bo-name bo-name-${t}`;
-      const fv = item.food_vils  ?? '';
-      const wv = item.wood_vils  ?? '';
-      const gv = item.gold_vils  ?? '';
-      const sv = item.stone_vils ?? '';
-      const pv = item.pop        != null ? item.pop : '';
+      const pv = item.pop != null ? item.pop : '';
+      function fmt(v) {
+        if (v == null) return '';
+        return v >= 1000 ? (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(v);
+      }
       function rc(v, cls) {
-        if (v === '' || v == null) return `<span class="res-cell"></span>`;
-        return `<span class="res-cell ${cls}${v === 0 ? ' zero' : ''}">${v}</span>`;
+        if (v == null) return `<span class="res-cell"></span>`;
+        return `<span class="res-cell ${cls}${v === 0 ? ' zero' : ''}">${fmt(v)}</span>`;
       }
       return `<div class="bo-row">
         <span class="bo-time">${esc(item.time_str || '')}</span>
         <span class="${dotClass}"></span>
         <span class="${nameClass}">${esc(item.name || '')}</span>
-        ${rc(fv,'res-f')}${rc(wv,'res-w')}${rc(gv,'res-g')}${rc(sv,'res-s')}
+        ${rc(item.food,'res-f')}${rc(item.wood,'res-w')}${rc(item.gold,'res-g')}${rc(item.stone,'res-s')}
         <span class="res-pop">${pv}</span>
       </div>`;
     }).join('');

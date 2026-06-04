@@ -178,15 +178,50 @@ class ResourceState:
         self.gold_villagers = 0
         self.stone_villagers = 0
 
-        # Timeseries calibration data (from match)
-        self.timeseries_points = []  # (time_ms, total_res)
+        # Timeseries calibration data (from match): (time_ms, total_resources)
+        self.timeseries_points = []
 
     def set_timeseries(self, player):
         """Extract timeseries points for calibration."""
         for row in player.timeseries:
             t_ms = int(row.timestamp.total_seconds() * 1000)
-            total = row.total_resources
-            self.timeseries_points.append((t_ms, total))
+            self.timeseries_points.append((t_ms, float(row.total_resources)))
+
+    def ts_total_at(self, time_ms):
+        """Linearly interpolate total_resources from timeseries at time_ms."""
+        pts = self.timeseries_points
+        if not pts:
+            return None
+        if time_ms <= pts[0][0]:
+            return pts[0][1]
+        if time_ms >= pts[-1][0]:
+            return pts[-1][1]
+        lo, hi = 0, len(pts) - 1
+        while lo + 1 < hi:
+            mid = (lo + hi) // 2
+            if pts[mid][0] <= time_ms:
+                lo = mid
+            else:
+                hi = mid
+        t0, v0 = pts[lo]
+        t1, v1 = pts[hi]
+        frac = (time_ms - t0) / max(1, t1 - t0)
+        return v0 + (v1 - v0) * frac
+
+    def calibrated_snapshot(self):
+        """Return (food, wood, gold, stone) scaled so their sum matches timeseries total."""
+        ts = self.ts_total_at(self.time_ms)
+        sim_total = self.food + self.wood + self.gold + self.stone
+        if ts is not None and sim_total > 0:
+            scale = ts / sim_total
+        else:
+            scale = 1.0
+        return (
+            max(0, round(self.food  * scale)),
+            max(0, round(self.wood  * scale)),
+            max(0, round(self.gold  * scale)),
+            max(0, round(self.stone * scale)),
+        )
 
     def advance_to(self, time_ms):
         """Advance time and accumulate resources from gathering."""
@@ -345,16 +380,17 @@ def parse_replay(record_bytes):
         res.stone_villagers = sum(1 for r in vt.values() if r == 'stone')
 
     def snap(pid):
-        """Snapshot of villager assignments + population at this moment."""
-        vt = villager_tasks[pid]
+        """Snapshot of calibrated resource amounts + population at this moment."""
+        res = resource_states[pid]
         pop = population_states[pid]
+        f, w, g, s = res.calibrated_snapshot()
         return {
-            'food_vils':  sum(1 for r in vt.values() if r == 'food'),
-            'wood_vils':  sum(1 for r in vt.values() if r == 'wood'),
-            'gold_vils':  sum(1 for r in vt.values() if r == 'gold'),
-            'stone_vils': sum(1 for r in vt.values() if r == 'stone'),
-            'pop':        pop.pop,
-            'pop_cap':    pop.pop_cap,
+            'food':    f,
+            'wood':    w,
+            'gold':    g,
+            'stone':   s,
+            'pop':     pop.pop,
+            'pop_cap': pop.pop_cap,
         }
 
     feudal_click = {}
