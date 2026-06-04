@@ -8,19 +8,19 @@
   <title>AoE2 Build Order</title>
   <style>
     :root {
-      --bg:        #0f0f0f;
-      --surface:   #1a1a1a;
-      --surface2:  #242424;
-      --border:    #333;
-      --accent:    #c89648;
-      --accent-dim:#7a5a28;
-      --text:      #e8e8e8;
-      --text-dim:  #888;
-      --error:     #e05c5c;
-      --blue:      #5b9bd5;
-      --green:     #5cb85c;
-      --purple:    #9b59b6;
-      --radius:    12px;
+      --bg:         #0f0f0f;
+      --surface:    #1a1a1a;
+      --surface2:   #242424;
+      --border:     #333;
+      --accent:     #c89648;
+      --accent-dim: #8a6530;
+      --text:       #e8e8e8;
+      --text-dim:   #888;
+      --error:      #e05c5c;
+      --success:    #5ce07a;
+      --tech:       #5bb5e0;
+      --build:      #a87fd4;
+      --radius:     12px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -30,16 +30,14 @@
       font-size: 16px;
       line-height: 1.5;
       min-height: 100dvh;
-      padding-bottom: 40px;
+      padding-bottom: 48px;
     }
-    .container { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+    .container { max-width: 740px; margin: 0 auto; padding: 0 16px; }
 
-    header { padding: 36px 0 28px; text-align: center; }
+    header { padding: 32px 0 24px; text-align: center; }
     header h1 {
-      font-size: clamp(22px, 5vw, 30px);
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: -0.5px;
+      font-size: clamp(20px, 5vw, 28px);
+      font-weight: 700; color: var(--accent); letter-spacing: -0.5px;
     }
     header p { margin-top: 6px; font-size: 14px; color: var(--text-dim); }
 
@@ -47,11 +45,11 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 22px 20px;
-      margin-bottom: 16px;
+      padding: 20px 18px;
+      margin-bottom: 14px;
     }
     .card h2 {
-      font-size: 13px; font-weight: 600;
+      font-size: 12px; font-weight: 600;
       text-transform: uppercase; letter-spacing: 0.08em;
       color: var(--text-dim); margin-bottom: 14px;
     }
@@ -61,190 +59,201 @@
     input[type="file"] {
       width: 100%;
       background: var(--surface2);
-      border: 2px dashed var(--border);
+      border: 1px dashed var(--border);
       border-radius: 8px;
       color: var(--text-dim);
       font-size: 15px;
-      padding: 20px 14px;
+      padding: 14px;
       cursor: pointer;
       -webkit-appearance: none;
       display: block;
-    }
-    input[type="file"]::file-selector-button {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      cursor: pointer;
-      font-size: 14px;
-      margin-right: 12px;
-      padding: 8px 14px;
     }
     .hint { margin-top: 8px; font-size: 12px; color: var(--text-dim); }
 
     button {
       background: var(--accent);
-      border: none;
-      border-radius: 8px;
-      color: #0f0f0f;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 700;
-      min-height: 52px;
-      padding: 0 24px;
+      border: none; border-radius: 8px;
+      color: #0f0f0f; cursor: pointer;
+      font-size: 15px; font-weight: 700;
+      min-height: 48px; padding: 0 22px;
       touch-action: manipulation;
       transition: opacity 0.15s;
-      width: 100%;
-      margin-top: 14px;
       -webkit-tap-highlight-color: transparent;
     }
     button:active { opacity: 0.8; }
     button:disabled { background: var(--accent-dim); cursor: not-allowed; opacity: 0.6; }
+    .btn-full { width: 100%; margin-top: 14px; }
     .btn-secondary {
       background: var(--surface2);
       border: 1px solid var(--border);
-      color: var(--text);
-      font-weight: 500;
+      color: var(--text); font-weight: 500;
+      width: 100%; margin-top: 12px;
     }
-    .btn-secondary:active { background: var(--border); }
 
     #loading-section { text-align: center; padding: 48px 0; }
     .spinner {
-      width: 48px; height: 48px;
+      width: 44px; height: 44px;
       border: 3px solid var(--border);
       border-top-color: var(--accent);
       border-radius: 50%;
-      margin: 0 auto 20px;
+      margin: 0 auto 18px;
       animation: spin 0.8s linear infinite;
     }
     #loading-text { color: var(--text-dim); font-size: 15px; }
 
     #error-section {
-      background: color-mix(in srgb, var(--error) 10%, var(--surface));
-      border: 1px solid color-mix(in srgb, var(--error) 35%, transparent);
+      background: color-mix(in srgb, var(--error) 12%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
       border-radius: var(--radius);
-      padding: 22px 20px;
-      margin-bottom: 16px;
+      padding: 22px 18px; margin-bottom: 14px;
     }
-    #error-message { color: var(--error); font-size: 15px; line-height: 1.6; margin-bottom: 14px; }
+    #error-message { color: var(--error); font-size: 15px; margin-bottom: 14px; }
 
-    /* ── Player summary cards ── */
-    .player-cards-grid {
+    /* ── Players grid ── */
+    .players-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 14px; align-items: start;
     }
-    @media (max-width: 480px) { .player-cards-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 500px) { .players-grid { grid-template-columns: 1fr; } }
 
-    .player-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px 16px;
-      display: flex;
-      flex-direction: column;
-    }
-    .player-card.fastest { border-color: var(--accent); }
-
-    .badge {
-      display: inline-block;
-      font-size: 11px; font-weight: 700;
-      letter-spacing: 0.05em;
-      padding: 3px 8px;
-      border-radius: 20px;
-      margin-bottom: 10px;
-      align-self: flex-start;
-    }
-    .badge-gold { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1px solid var(--accent-dim); }
-    .badge-dim  { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
-
-    .player-name { font-size: 17px; font-weight: 700; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .player-civ  { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
-
-    .age-times { display: flex; gap: 14px; margin-top: auto; }
-    .age-time-col { flex: 1; }
-    .age-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 2px; }
-    .age-value { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
-    .age-value.has-time { color: var(--accent); }
-    .age-value.castle   { color: var(--blue); }
-    .age-value.no-time  { color: var(--text-dim); font-size: 18px; }
-
-    /* ── Build order section ── */
-    .section-label {
-      font-size: 13px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.08em;
-      color: var(--text-dim);
-      margin: 20px 0 10px;
-    }
-    .build-orders-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    @media (max-width: 480px) { .build-orders-grid { grid-template-columns: 1fr; } }
-
-    .bo-col {
+    .player-panel {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
     }
-    .bo-col-header {
-      padding: 10px 14px;
-      font-size: 13px;
-      font-weight: 700;
-      background: var(--surface2);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .player-panel.highlight { border-color: var(--accent); }
+
+    .player-header { padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }
+    .player-badge-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .badge {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 20px;
     }
-    .bo-col-meta { font-size: 11px; font-weight: 400; color: var(--text-dim); }
+    .badge-gold {
+      background: color-mix(in srgb, var(--accent) 20%, transparent);
+      color: var(--accent); border: 1px solid var(--accent-dim);
+    }
+    .badge-dim {
+      background: var(--surface2);
+      color: var(--text-dim); border: 1px solid var(--border);
+    }
+    .player-name {
+      font-size: 16px; font-weight: 700;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .player-civ { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+    /* ── Age timing grid ── */
+    .age-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px; background: var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .age-cell { background: var(--surface); padding: 10px 12px; }
+    .age-cell-label {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-dim); margin-bottom: 3px;
+    }
+    .age-cell-value {
+      font-size: 20px; font-weight: 800;
+      letter-spacing: -0.5px; font-variant-numeric: tabular-nums;
+    }
+    .age-cell-value.val-feudal { color: var(--accent); }
+    .age-cell-value.val-castle { color: var(--tech); }
+    .age-cell-value.val-none   { color: var(--text-dim); font-size: 15px; font-weight: 400; }
+
+    /* ── Build order table ── */
+    /* col widths: time dot name F W G S pop */
+    .bo-header-row,
+    .bo-row {
+      display: grid;
+      grid-template-columns: 40px 8px 1fr 22px 22px 22px 22px 26px;
+      align-items: center;
+      gap: 4px; padding: 4px 10px;
+    }
+    .bo-header-row {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      padding-top: 7px; padding-bottom: 5px;
+      position: sticky; top: 0;
+      background: var(--surface); z-index: 1;
+    }
     .bo-list {
-      max-height: 440px;
+      padding: 0 0 6px;
+      max-height: 380px;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
-    .bo-entry {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      padding: 5px 14px;
-      font-size: 13px;
-      border-left: 3px solid transparent;
+    .bo-list:empty::after {
+      content: 'No build order recorded';
+      display: block; padding: 14px; font-size: 13px; color: var(--text-dim);
     }
-    .bo-entry + .bo-entry { border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
-    .bo-age      { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); font-weight: 700; color: var(--accent); }
-    .bo-tech     { border-left-color: var(--blue); }
-    .bo-unit     { border-left-color: var(--green); }
-    .bo-building { border-left-color: var(--purple); }
-    .bo-time     { font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; min-width: 32px; flex-shrink: 0; }
-    .bo-name     { flex: 1; }
-    .bo-amount   { font-size: 11px; color: var(--text-dim); flex-shrink: 0; }
-
-    .bo-empty {
-      padding: 20px 14px;
-      font-size: 13px;
-      color: var(--text-dim);
-      text-align: center;
+    .bo-row { border-radius: 3px; }
+    .bo-row:hover { background: var(--surface2); }
+    .bo-time {
+      font-variant-numeric: tabular-nums;
+      color: var(--text-dim); font-size: 11px; text-align: right;
     }
+    .bo-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; justify-self: center;
+    }
+    .bo-dot-age    { background: var(--accent); }
+    .bo-dot-unit   { background: var(--success); }
+    .bo-dot-build  { background: var(--build); }
+    .bo-dot-tech   { background: var(--tech); }
+    .bo-dot-gather { background: #e08030; }
 
+    .bo-name { color: var(--text); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bo-name-age    { color: var(--accent); font-weight: 600; }
+    .bo-name-build  { color: var(--build); }
+    .bo-name-tech   { color: var(--tech); }
+    .bo-name-gather { color: #e08030; }
+
+    .res-cell {
+      font-size: 11px; font-variant-numeric: tabular-nums; text-align: center;
+    }
+    .res-cell.zero { color: var(--border); }
+    .res-f   { color: #c89648; }
+    .res-w   { color: #5ce07a; }
+    .res-g   { color: #f0d060; }
+    .res-s   { color: #aaaaaa; }
+    .res-pop { color: var(--text-dim); font-size: 11px; text-align: center; }
+
+    .tc-idle-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px 8px;
+      font-size: 11px; color: var(--text-dim);
+      border-top: 1px solid var(--border);
+    }
+    .tc-idle-val { color: var(--error); font-weight: 700; }
+
+    /* ── Legend / meta ── */
+    .match-meta {
+      font-size: 13px; color: var(--text-dim);
+      text-align: center; margin-bottom: 18px;
+      display: flex; justify-content: center; gap: 18px; flex-wrap: wrap;
+    }
     .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 14px;
-      font-size: 12px;
-      color: var(--text-dim);
+      display: flex; gap: 14px; flex-wrap: wrap;
+      justify-content: center; margin: 14px 0 18px;
     }
-    .legend-item { display: flex; align-items: center; gap: 5px; }
-    .legend-dot  { width: 10px; height: 10px; border-radius: 50%; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); }
+    .legend-dot  { width: 8px; height: 8px; border-radius: 50%; }
 
-    .result-meta { font-size: 12px; color: var(--text-dim); text-align: center; margin-bottom: 12px; }
     .hidden { display: none !important; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60%  { transform: translateX(-6px); }
+      40%,80%  { transform: translateX(6px); }
+    }
   </style>
 </head>
 <body>
@@ -252,15 +261,15 @@
 
   <header>
     <h1>AoE2 Build Order</h1>
-    <p>Upload a replay to see each player's build order up to Castle Age</p>
+    <p>Parsed locally in your browser — file never leaves your device</p>
   </header>
 
   <div class="card" id="upload-section">
     <h2>Upload Replay File</h2>
     <label for="file-input">Select .aoe2record or .zip file</label>
     <input id="file-input" type="file" accept=".aoe2record,.zip,.mgz">
-    <p class="hint">Parsed locally — your file is never uploaded anywhere</p>
-    <button id="analyze-btn">Analyze Replay</button>
+    <p class="hint">Supports DE format · spam clicks filtered by queue simulation</p>
+    <button class="btn-full" id="analyze-btn">Analyze Replay</button>
   </div>
 
   <div id="loading-section" class="hidden">
@@ -274,23 +283,19 @@
   </div>
 
   <div id="results-section" class="hidden">
-    <div class="player-cards-grid" id="player-cards"></div>
-    <p class="section-label">Build Orders</p>
+    <div class="match-meta" id="match-meta"></div>
     <div class="legend">
-      <span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span> Age-up</span>
-      <span class="legend-item"><span class="legend-dot" style="background:var(--green)"></span> Unit trained</span>
-      <span class="legend-item"><span class="legend-dot" style="background:var(--purple)"></span> Building placed</span>
-      <span class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span> Tech researched</span>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> Age-up</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--success)"></div> Unit</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--build)"></div> Building</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--tech)"></div> Tech</div>
     </div>
-    <div class="build-orders-grid" id="build-orders"></div>
-    <p class="result-meta" id="result-meta"></p>
-    <button class="btn-secondary" id="again-btn">← Analyze Another</button>
+    <div class="players-grid" id="players-grid"></div>
+    <button class="btn-secondary" id="again-btn" style="margin-top:20px">← Analyze Another</button>
   </div>
 
 </div>
-
 <script>
-// ── Civilisation lookup ────────────────────────────────────────────────────────
 const CIVS = {
   1:'Britons',2:'Franks',3:'Goths',4:'Teutons',5:'Japanese',
   6:'Chinese',7:'Byzantines',8:'Persians',9:'Saracens',10:'Turks',
@@ -304,7 +309,6 @@ const CIVS = {
   43:'Romans',44:'Armenians',45:'Georgians',
 };
 
-// ── Unit ID → name (from aocref dataset 100) ───────────────────────────────────
 const UNITS = {
   4:'Archer', 5:'Hand Cannoneer', 6:'Elite Skirmisher', 7:'Skirmisher',
   8:'Longbowman', 11:'Mangudai', 13:'Fishing Ship', 17:'Trade Cog',
@@ -316,108 +320,69 @@ const UNITS = {
   207:'Imperial Camel Rider', 232:'Woad Raider', 239:'War Elephant',
   250:'Longboat', 279:'Scorpion', 280:'Mangonel', 281:'Throwing Axeman',
   282:'Mameluke', 283:'Cavalier', 291:'Samurai', 329:'Camel Rider',
-  330:'Heavy Camel Rider', 331:'Trebuchet (packed)', 358:'Pikeman',
-  359:'Halberdier', 422:'Capped Ram', 440:'Petard', 441:'Hussar',
-  448:'Scout Cavalry', 473:'Two-Handed Swordsman', 474:'Heavy Cavalry Archer',
-  492:'Arbalester', 527:'Demo Ship', 528:'Heavy Demo Ship',
-  529:'Fire Ship', 532:'Fast Fire Ship', 534:'Elite Woad Raider',
-  539:'Galley', 542:'Heavy Scorpion', 546:'Light Cavalry',
-  548:'Siege Ram', 550:'Onager', 553:'Elite Cataphract',
-  554:'Elite Teutonic Knight', 555:'Elite Huskarl', 556:'Elite Mameluke',
-  557:'Elite Janissary', 558:'Elite War Elephant', 559:'Elite Chu Ko Nu',
-  560:'Elite Samurai', 561:'Elite Mangudai', 567:'Champion', 569:'Paladin',
-  583:'Genitour', 588:'Siege Onager', 725:'Jaguar Warrior',
-  726:'Elite Jaguar Warrior', 751:'Eagle Scout', 752:'Elite Eagle Warrior',
-  753:'Eagle Warrior', 763:'Plumed Archer', 765:'Elite Plumed Archer',
-  771:'Conquistador', 773:'Elite Conquistador', 827:'War Wagon',
-  829:'Elite War Wagon', 831:'Turtle Ship', 832:'Elite Turtle Ship',
-  869:'Magyar Huszar', 871:'Elite Magyar Huszar', 876:'Boyar',
-  878:'Elite Boyar', 879:'Kamayuk', 881:'Elite Kamayuk',
-  1001:'Organ Gun', 1003:'Elite Organ Gun', 1004:'Caravel',
-  1007:'Camel Archer', 1013:'Gbeto', 1016:'Shotel Warrior',
-  1120:'Ballista Elephant', 1231:'Kipchak',
+  330:'Heavy Camel Rider', 358:'Pikeman', 359:'Halberdier',
+  422:'Capped Ram', 440:'Petard', 441:'Hussar', 448:'Scout Cavalry',
+  473:'Two-Handed Swordsman', 474:'Heavy Cavalry Archer',
+  492:'Arbalester', 539:'Galley', 542:'Heavy Scorpion',
+  548:'Siege Ram', 550:'Onager', 567:'Champion', 569:'Paladin',
+  725:'Jaguar Warrior', 751:'Eagle Scout', 753:'Eagle Warrior',
+  763:'Plumed Archer', 771:'Conquistador', 827:'War Wagon',
+  869:'Magyar Huszar', 876:'Boyar', 879:'Kamayuk',
+  1001:'Organ Gun', 1004:'Caravel', 1007:'Camel Archer',
+  1013:'Gbeto', 1016:'Shotel Warrior',
 };
 
-// ── Building ID → name (from aocref; many variants map to same name) ──────────
 const BUILDINGS = {
-  10:'Archery Range', 14:'Archery Range', 87:'Archery Range',
-  12:'Barracks', 20:'Barracks', 132:'Barracks',
-  18:'Blacksmith', 19:'Blacksmith', 103:'Blacksmith', 105:'Blacksmith',
-  30:'Monastery', 31:'Monastery', 32:'Monastery', 104:'Monastery',
-  45:'Dock', 47:'Dock', 51:'Dock', 133:'Dock',
-  49:'Siege Workshop', 150:'Siege Workshop',
-  50:'Farm',
-  68:'Mill', 129:'Mill', 130:'Mill', 131:'Mill',
-  70:'House', 191:'House', 192:'House', 463:'House', 464:'House', 465:'House',
-  71:'Town Center', 109:'Town Center', 141:'Town Center',
-  72:'Palisade Wall', 119:'Fortified Palisade Wall',
-  79:'Watch Tower', 566:'Watch Tower',
-  82:'Castle', 445:'Castle',
-  84:'Market', 116:'Market',
-  86:'Stable', 101:'Stable', 153:'Stable',
-  117:'Stone Wall', 155:'Fortified Wall',
-  190:'Fire Tower',
-  199:'Palisade Gate', 789:'Palisade Gate', 790:'Palisade Gate',
-  209:'University', 210:'University',
-  234:'Guard Tower', 235:'Keep',
-  276:'Wonder',
-  562:'Lumber Camp', 563:'Lumber Camp',
-  584:'Mining Camp', 585:'Mining Camp',
-  597:'Town Center',
-  598:'Outpost',
+  10:'Archery Range', 12:'Barracks', 14:'Archery Range', 18:'Blacksmith',
+  20:'Barracks', 30:'Monastery', 45:'Dock', 47:'Dock', 49:'Siege Workshop',
+  50:'Farm', 68:'Mill', 70:'House', 71:'Town Center', 72:'Palisade Wall',
+  79:'Watch Tower', 82:'Castle', 84:'Market', 86:'Stable', 87:'Archery Range',
+  101:'Stable', 103:'Blacksmith', 109:'Town Center', 116:'Market',
+  117:'Stone Wall', 119:'Fortified Palisade Wall', 129:'Mill', 130:'Mill',
+  131:'Mill', 132:'Barracks', 133:'Dock', 141:'Town Center', 150:'Siege Workshop',
+  153:'Stable', 155:'Fortified Wall', 190:'Fire Tower', 191:'House', 192:'House',
+  199:'Palisade Gate', 209:'University', 234:'Guard Tower', 235:'Keep',
+  276:'Wonder', 463:'House', 464:'House', 465:'House', 562:'Lumber Camp',
+  563:'Lumber Camp', 566:'Watch Tower', 584:'Mining Camp', 585:'Mining Camp',
+  597:'Town Center', 598:'Outpost', 789:'Palisade Gate', 790:'Palisade Gate',
   1251:'Krepost',
 };
 
-// ── Technology ID → name (from aocref dataset 100) ────────────────────────────
 const TECHS = {
-  8:'Town Watch', 12:'Crop Rotation', 13:'Heavy Plow', 14:'Horse Collar',
-  15:'Guilds', 17:'Banking', 19:'Cartography', 22:'Loom', 23:'Coinage',
-  34:'War Galley', 35:'Galleon', 37:'Cannon Galleon', 39:'Husbandry',
-  45:'Faith', 46:'Devotion', 47:'Chemistry', 48:'Caravan',
-  50:'Masonry', 51:'Architecture', 54:'Treadmill Crane', 55:'Gold Mining',
-  63:'Keep', 64:'Bombard Tower', 65:'Gillnets',
-  67:'Forging', 68:'Iron Casting', 74:'Scale Mail Armor',
-  75:'Blast Furnace', 76:'Chain Mail Armor', 77:'Plate Mail Armor',
-  80:'Plate Barding Armor', 81:'Scale Barding Armor', 82:'Chain Barding Armor',
-  83:'Bearded Axe', 85:'Hand Cannon', 90:'Tracking', 93:'Ballistics',
-  96:'Capped Ram', 98:'Elite Skirmisher', 100:'Crossbowman',
-  101:'Feudal Age', 102:'Castle Age', 103:'Imperial Age', 104:'Dark Age',
+  8:'Town Watch', 13:'Heavy Plow', 14:'Horse Collar', 22:'Loom', 39:'Husbandry',
+  47:'Chemistry', 50:'Masonry', 51:'Architecture', 54:'Treadmill Crane',
+  55:'Gold Mining', 63:'Keep', 64:'Bombard Tower', 67:'Forging',
+  68:'Iron Casting', 74:'Scale Mail Armor', 75:'Blast Furnace',
+  76:'Chain Mail Armor', 77:'Plate Mail Armor', 80:'Plate Barding Armor',
+  81:'Scale Barding Armor', 82:'Chain Barding Armor', 83:'Bearded Axe',
+  90:'Tracking', 93:'Ballistics', 96:'Capped Ram', 98:'Elite Skirmisher',
+  100:'Crossbowman', 101:'Feudal Age', 102:'Castle Age', 103:'Imperial Age',
   140:'Guard Tower', 182:'Gold Shaft Mining', 188:'Bombard Cannon',
   194:'Fortified Wall', 197:'Pikeman', 199:'Fletching', 200:'Bodkin Arrow',
   201:'Bracer', 202:'Double-Bit Axe', 203:'Bow Saw', 207:'Long Swordsman',
-  209:'Cavalier', 211:'Padded Archer Armor', 212:'Leather Archer Armor',
-  213:'Wheelbarrow', 215:'Squires', 217:'Two-Handed Swordsman',
-  218:'Heavy Cavalry Archer', 219:'Ring Archer Armor', 221:'Two-Man Saw',
-  222:'Man-at-Arms', 230:'Block Printing', 231:'Sanctity', 233:'Illumination',
+  209:'Cavalier', 213:'Wheelbarrow', 215:'Squires', 217:'Two-Handed Swordsman',
+  218:'Heavy Cavalry Archer', 221:'Two-Man Saw', 222:'Man-at-Arms',
   236:'Heavy Camel Rider', 237:'Arbalester', 239:'Heavy Scorpion',
-  244:'Heavy Demo Ship', 246:'Fast Fire Ship', 249:'Hand Cart',
-  252:'Fervor', 254:'Light Cavalry', 255:'Siege Ram', 257:'Onager',
+  249:'Hand Cart', 254:'Light Cavalry', 255:'Siege Ram', 257:'Onager',
   264:'Champion', 265:'Paladin', 278:'Stone Mining', 279:'Stone Shaft Mining',
   280:'Town Patrol', 315:'Conscription', 320:'Siege Onager', 321:'Sappers',
   322:'Murder Holes', 377:'Siege Engineers', 379:'Hoardings',
   408:'Spies', 428:'Hussar', 429:'Halberdier', 435:'Bloodlines',
-  436:'Parthian Tactics', 437:'Thumb Ring', 438:'Theocracy',
-  439:'Heresy', 440:'Supremacy',
+  436:'Parthian Tactics', 437:'Thumb Ring', 440:'Supremacy',
 };
 
-// ── Unit training times in ms at 1.0× speed ───────────────────────────────────
-// Used to model production queue depth and filter spam-clicks.
 const TRAIN_MS = {
-  83:25000, 74:21000, 75:21000, 77:21000, 567:21000,   // villager / infantry line
-  93:22000, 358:22000, 359:22000,                        // spear line
-  4:35000, 7:22000, 24:27000, 492:35000, 8:35000,       // archer range
-  448:30000, 37:30000, 441:30000,                        // stable line (scout/cav)
-  38:30000, 283:30000, 569:30000,                        // knight line
-  751:35000, 753:35000,                                  // eagle line
-  125:51000,                                             // monk
-  13:40000, 17:36000, 539:60000,                        // dock
-  35:36000, 422:36000, 548:36000,                        // rams
-  280:46000, 550:46000,                                  // mangonel/onager
-  279:30000, 542:30000,                                  // scorpion
-  40:75000, 46:60000,                                    // unique heavies
+  83:25000, 74:21000, 75:21000, 77:21000, 567:21000,
+  93:22000, 358:22000, 359:22000,
+  4:35000, 7:22000, 24:27000, 492:35000, 8:35000,
+  448:30000, 37:30000, 441:30000,
+  38:30000, 283:30000, 569:30000,
+  751:35000, 753:35000,
+  125:51000, 13:40000, 17:36000,
+  35:36000, 422:36000, 548:36000,
+  280:46000, 550:46000, 279:30000, 542:30000,
 };
 
-// food, wood, gold, stone
 const UNIT_COSTS = {
   83:[50,0,0,0], 74:[60,0,0,0], 75:[60,0,0,0], 77:[60,20,0,0], 567:[60,20,0,0],
   93:[60,0,0,0], 358:[75,0,0,0], 359:[75,0,0,0],
@@ -441,7 +406,6 @@ const TECH_COSTS = {
 
 const LOADING_MSGS = ['Reading file…','Parsing header…','Scanning operations…','Building order…'];
 
-// ── UI refs ───────────────────────────────────────────────────────────────────
 const uploadSection  = document.getElementById('upload-section');
 const loadingSection = document.getElementById('loading-section');
 const errorSection   = document.getElementById('error-section');
@@ -450,9 +414,8 @@ const fileInput      = document.getElementById('file-input');
 const analyzeBtn     = document.getElementById('analyze-btn');
 const loadingText    = document.getElementById('loading-text');
 const errorMessage   = document.getElementById('error-message');
-const playerCards    = document.getElementById('player-cards');
-const buildOrdersEl  = document.getElementById('build-orders');
-const resultMeta     = document.getElementById('result-meta');
+const playersGrid    = document.getElementById('players-grid');
+const matchMeta      = document.getElementById('match-meta');
 
 document.getElementById('analyze-btn').addEventListener('click', handleAnalyze);
 document.getElementById('back-btn').addEventListener('click', showHome);
@@ -492,7 +455,6 @@ function showError(msg) {
   uploadSection.classList.remove('hidden');
 }
 
-// ── File handling ─────────────────────────────────────────────────────────────
 async function handleAnalyze() {
   const file = fileInput.files[0];
   if (!file) {
@@ -520,15 +482,15 @@ function isZip(buf) {
 
 async function extractFromZip(buf) {
   const bytes = new Uint8Array(buf);
-  const view = new DataView(buf);
+  const view  = new DataView(buf);
   for (let i = 0; i < bytes.length - 30; i++) {
     if (bytes[i]===0x50 && bytes[i+1]===0x4B && bytes[i+2]===0x03 && bytes[i+3]===0x04) {
-      const compression     = view.getUint16(i + 8, true);
-      const compressedSize  = view.getUint32(i + 18, true);
+      const compression      = view.getUint16(i + 8, true);
+      const compressedSize   = view.getUint32(i + 18, true);
       const uncompressedSize = view.getUint32(i + 22, true);
-      const fnameLen        = view.getUint16(i + 26, true);
-      const extraLen        = view.getUint16(i + 28, true);
-      const dataOffset      = i + 30 + fnameLen + extraLen;
+      const fnameLen         = view.getUint16(i + 26, true);
+      const extraLen         = view.getUint16(i + 28, true);
+      const dataOffset       = i + 30 + fnameLen + extraLen;
       const fname = new TextDecoder().decode(bytes.slice(i + 30, i + 30 + fnameLen)).toLowerCase();
       if (fname.endsWith('.aoe2record') || fname.endsWith('.mgz')) {
         const entryData = bytes.slice(dataOffset, dataOffset + compressedSize);
@@ -540,7 +502,7 @@ async function extractFromZip(buf) {
           const reader = ds.readable.getReader();
           writer.write(entryData);
           writer.close();
-          return await readAllChunks(reader, uncompressedSize);
+          return await readAllChunks(reader);
         }
         throw new Error(`Unsupported ZIP compression ${compression}`);
       }
@@ -555,8 +517,7 @@ async function readAllChunks(reader) {
   while (true) {
     const {value, done} = await reader.read();
     if (done) break;
-    chunks.push(value);
-    total += value.length;
+    chunks.push(value); total += value.length;
   }
   const out = new Uint8Array(total);
   let off = 0;
@@ -576,16 +537,13 @@ async function parseReplay(buf) {
   if (headerLen >= size) throw new Error(`Invalid header length ${headerLen}`);
 
   let players = [];
-  try {
-    players = await extractPlayerInfo(bytes.slice(8, headerLen));
-  } catch(_) {}
+  try { players = await extractPlayerInfo(bytes.slice(8, headerLen)); } catch(_) {}
 
   const opsStart = skipMeta(view, headerLen, size);
   const opsResult = parseOps(view, bytes, opsStart, size);
   return buildResult(players, opsResult);
 }
 
-// ── META section skip ─────────────────────────────────────────────────────────
 function skipMeta(view, offset, size) {
   if (offset + 40 > size) return offset;
   const first = view.getUint32(offset, true);
@@ -601,7 +559,6 @@ function skipMeta(view, offset, size) {
   return pos;
 }
 
-// ── SYNC size calculation ─────────────────────────────────────────────────────
 function syncSize(view, offset, bufSize) {
   if (offset + 8 > bufSize) return { inc: 0, size: 4 };
   const inc    = view.getUint32(offset,     true);
@@ -613,28 +570,23 @@ function syncSize(view, offset, bufSize) {
   return { inc, size: 364 };
 }
 
-// ── Operation loop ────────────────────────────────────────────────────────────
 function parseOps(view, bytes, start, size) {
   let offset = start;
   let timeMs = 0;
-  const feudalTimes  = {};  // player_id -> ms
-  const feudalPops   = {};  // player_id -> "pop/cap" string at feudal click
-  const castleTimes  = {};  // player_id -> ms
-  const buildOrders  = {};  // player_id -> [{time_ms, type, id, name, amount}]
-
-  // Per-building production queue: pid -> buildingKey -> sorted array of unit finish times
-  const bQueues = {};
-
-  // Resource state per player: food, wood, gold, stone, lastTime, vills (total gatherers)
-  // Start: 200 food, 200 wood, 3 starting villagers assumed gathering
-  const res = {};
-  // Population per player: pop (units alive), cap (from TC + houses)
-  const pop = {};
+  const feudalTimes = {};
+  const feudalPops  = {};
+  const castleTimes = {};
+  const buildOrders = {};
+  const tcIdleLogs  = {};  // pid -> [{start, end}] TC production windows
+  const bQueues     = {};
+  const res         = {};
+  const pop         = {};
 
   function initPlayer(pid) {
     if (!res[pid]) {
-      res[pid] = { food: 200, wood: 200, gold: 0, stone: 0, lastTime: 0, vills: 3 };
-      pop[pid] = { pop: 3, cap: 5 };  // 3 starting vills, 1 TC = 5 cap
+      res[pid] = { food:200, wood:200, gold:0, stone:0, lastTime:0, vills:3 };
+      pop[pid] = { pop:3, cap:5 };
+      tcIdleLogs[pid] = [];
     }
   }
 
@@ -642,8 +594,6 @@ function parseOps(view, bytes, start, size) {
     const r = res[pid];
     const dt = toMs - r.lastTime;
     if (dt <= 0) return;
-    // Simplified gather: vills split ~60% food / 40% wood at base rates
-    // 20 food/min/vill, 18 wood/min/vill  → /60000 ms
     r.food += r.vills * 0.6 * 20 / 60000 * dt;
     r.wood += r.vills * 0.4 * 18 / 60000 * dt;
     r.lastTime = toMs;
@@ -662,7 +612,6 @@ function parseOps(view, bytes, start, size) {
     r.stone = Math.max(0, r.stone - cost[3]*n);
   }
 
-  // Returns how many units were actually accepted into the queue (0 = full, spam rejected).
   function tryQueue(pid, bKey, unitId, wantAmount, now) {
     if (!bQueues[pid]) bQueues[pid] = {};
     if (!bQueues[pid][bKey]) bQueues[pid][bKey] = [];
@@ -679,6 +628,18 @@ function parseOps(view, bytes, start, size) {
     return actual;
   }
 
+  function logTCVil(pid, bKey, nQueued) {
+    // Log the actual training window for each villager queued
+    const q = (bQueues[pid] && bQueues[pid][bKey]) ? bQueues[pid][bKey] : [];
+    const trainMs = TRAIN_MS[83];
+    for (let i = q.length - nQueued; i < q.length; i++) {
+      if (i >= 0) {
+        const finish = q[i];
+        tcIdleLogs[pid].push({ start: finish - trainMs, end: finish });
+      }
+    }
+  }
+
   function add(pid, ev) {
     if (!buildOrders[pid]) buildOrders[pid] = [];
     buildOrders[pid].push(ev);
@@ -689,22 +650,19 @@ function parseOps(view, bytes, start, size) {
     offset += 4;
 
     switch (opType) {
-      case 1: {  // ACTION
+      case 1: {
         if (offset + 4 > size) break outer;
         const length = view.getUint32(offset, true);
         offset += 4;
         if (length < 1 || offset + length + 4 > size) break outer;
 
         const actionId = bytes[offset];
-        const abStart  = offset + 1;   // action_bytes start (after action type byte)
-        const abLen    = length - 1;   // action_bytes length
-
-        // DE-71094 detection: action_bytes = [player_id:1][inner_len:2][raw:inner_len]
-        // so inner_len + 3 === abLen
+        const abStart  = offset + 1;
+        const abLen    = length - 1;
         const innerLen  = abLen >= 3 ? view.getInt16(abStart + 1, true) : -1;
         const isDE71094 = abLen >= 3 && innerLen >= 0 && (innerLen + 3) === abLen;
 
-        // ── RESEARCH (0x65) ──
+        // RESEARCH 0x65
         if (actionId === 0x65 && abLen >= 10) {
           let pid, tech_id;
           if (isDE71094) {
@@ -719,31 +677,24 @@ function parseOps(view, bytes, start, size) {
             initPlayer(pid);
             advanceRes(pid, timeMs);
             const beforeCastle = !(pid in castleTimes);
-            const cost = TECH_COSTS[tech_id] || [300,0,0,0];
-            if (beforeCastle && canAfford(pid, cost, 1)) {
+            const cost = TECH_COSTS[tech_id] || [0,0,0,0];
+            if (beforeCastle && (tech_id in TECH_COSTS ? canAfford(pid, cost, 1) : true)) {
               spend(pid, cost, 1);
               const isAge = tech_id === 101 || tech_id === 102 || tech_id === 103;
-              add(pid, {
-                time_ms: timeMs, type: isAge ? 'age' : 'tech',
-                id: tech_id, name: TECHS[tech_id] || `Tech #${tech_id}`, amount: 1,
-              });
+              add(pid, { time_ms:timeMs, type:isAge?'age':'tech', id:tech_id, name:TECHS[tech_id]||`Tech #${tech_id}`, amount:1 });
               if (tech_id === 101 && !(pid in feudalTimes)) {
                 feudalTimes[pid] = timeMs;
                 feudalPops[pid]  = `${pop[pid].pop}/${pop[pid].cap}`;
               }
               if (tech_id === 102 && !(pid in castleTimes)) castleTimes[pid] = timeMs;
             } else if (!beforeCastle) {
-              // still record age-up click times even if we're past castle
-              if (tech_id === 101 && !(pid in feudalTimes)) {
-                feudalTimes[pid] = timeMs;
-                feudalPops[pid]  = `${pop[pid].pop}/${pop[pid].cap}`;
-              }
+              if (tech_id === 101 && !(pid in feudalTimes)) { feudalTimes[pid] = timeMs; feudalPops[pid] = `${pop[pid].pop}/${pop[pid].cap}`; }
               if (tech_id === 102 && !(pid in castleTimes)) castleTimes[pid] = timeMs;
             }
           }
         }
 
-        // ── BUILD (0x66) — DE-71094 only ──
+        // BUILD 0x66
         else if (actionId === 0x66 && isDE71094 && abLen >= 19) {
           const pid = view.getInt8(abStart);
           if (pid > 0 && pid <= 8 && !(pid in castleTimes)) {
@@ -754,17 +705,14 @@ function parseOps(view, bytes, start, size) {
               const cost = BUILDING_COSTS[building_id] || [0,75,0,0];
               if (canAfford(pid, cost, 1)) {
                 spend(pid, cost, 1);
-                if (building_id === 70) pop[pid].cap += 5;  // House: +5 pop cap
-                add(pid, {
-                  time_ms: timeMs, type: 'building',
-                  id: building_id, name: BUILDINGS[building_id] || `Building #${building_id}`, amount: 1,
-                });
+                if (building_id === 70) pop[pid].cap += 5;
+                add(pid, { time_ms:timeMs, type:'building', id:building_id, name:BUILDINGS[building_id]||`Building #${building_id}`, amount:1 });
               }
             }
           }
         }
 
-        // ── DE_QUEUE (0x81) — DE-71094 only ──
+        // DE_QUEUE 0x81
         else if (actionId === 0x81 && isDE71094 && abLen >= 16) {
           const pid = view.getInt8(abStart);
           if (pid > 0 && pid <= 8 && !(pid in castleTimes)) {
@@ -783,23 +731,22 @@ function parseOps(view, bytes, start, size) {
                   const bKey = (selected > 0 && bOff + 4 <= offset + length)
                     ? view.getUint32(bOff, true)
                     : (pid * 100 + bi);
-                  totalActual += tryQueue(pid, bKey, unit_id, want, timeMs);
+                  const n = tryQueue(pid, bKey, unit_id, want, timeMs);
+                  totalActual += n;
+                  if (n > 0 && unit_id === 83) logTCVil(pid, bKey, n);
                 }
                 if (totalActual > 0) {
                   spend(pid, cost, totalActual);
                   pop[pid].pop += totalActual;
-                  if (unit_id === 83) res[pid].vills += totalActual;  // new vills gather
-                  add(pid, {
-                    time_ms: timeMs, type: 'unit',
-                    id: unit_id, name: UNITS[unit_id] || `Unit #${unit_id}`, amount: totalActual,
-                  });
+                  if (unit_id === 83) res[pid].vills += totalActual;
+                  add(pid, { time_ms:timeMs, type:'unit', id:unit_id, name:UNITS[unit_id]||`Unit #${unit_id}`, amount:totalActual, pop:`${pop[pid].pop}/${pop[pid].cap}` });
                 }
               }
             }
           }
         }
 
-        // ── MAKE (0x64) — DE-71094 only ──
+        // MAKE 0x64
         else if (actionId === 0x64 && isDE71094 && abLen >= 13) {
           const pid = view.getInt8(abStart);
           if (pid > 0 && pid <= 8 && !(pid in castleTimes)) {
@@ -815,62 +762,46 @@ function parseOps(view, bytes, start, size) {
                 if (actual > 0) {
                   spend(pid, cost, actual);
                   pop[pid].pop += actual;
-                  if (unit_id === 83) res[pid].vills += actual;
-                  add(pid, {
-                    time_ms: timeMs, type: 'unit',
-                    id: unit_id, name: UNITS[unit_id] || `Unit #${unit_id}`, amount: 1,
-                  });
+                  if (unit_id === 83) { res[pid].vills += actual; logTCVil(pid, bKey, actual); }
+                  add(pid, { time_ms:timeMs, type:'unit', id:unit_id, name:UNITS[unit_id]||`Unit #${unit_id}`, amount:1, pop:`${pop[pid].pop}/${pop[pid].cap}` });
                 }
               }
             }
           }
         }
 
-        offset += length;
-        offset += 4;
+        offset += length + 4;
         break;
       }
-
-      case 2: {  // SYNC
+      case 2: {
         const { inc, size: sz } = syncSize(view, offset, size);
-        timeMs += inc;
-        offset += sz;
+        timeMs += inc; offset += sz;
         break;
       }
-
-      case 3: {  // VIEWLOCK: x(f) + y(f) + unk(I) = 12 bytes
-        offset += 12;
-        break;
-      }
-
-      case 4: {  // CHAT
+      case 3: { offset += 12; break; }
+      case 4: {
         if (offset + 8 > size) break outer;
         const msgLen = view.getUint32(offset + 4, true);
         offset += 8 + msgLen;
         break;
       }
-
-      case 5:   // POSTGAME — end of meaningful data
-        break outer;
-
-      default:
-        break outer;
+      case 5: break outer;
+      default: break outer;
     }
   }
 
-  return { feudalTimes, feudalPops, castleTimes, buildOrders };
+  return { feudalTimes, feudalPops, castleTimes, buildOrders, tcIdleLogs };
 }
 
-// ── Player info from compressed header ───────────────────────────────────────
 async function extractPlayerInfo(compressed) {
   const ds = new DecompressionStream('deflate-raw');
   const writer = ds.writable.getWriter();
   const reader = ds.readable.getReader();
   writer.write(compressed);
   writer.close();
-  const decompBuf  = await readAllChunks(reader);
+  const decompBuf    = await readAllChunks(reader);
   const decompressed = new Uint8Array(decompBuf);
-  const dv = new DataView(decompBuf);
+  const dv           = new DataView(decompBuf);
 
   const strings = [];
   for (let i = 0; i + 4 < decompressed.length; i++) {
@@ -885,30 +816,39 @@ async function extractPlayerInfo(compressed) {
     }
   }
 
-  const SKIP = new Set(['Gaia', 'GAIA', '', 'MP Random', 'Random', 'Scenario',
-    'Regicide', 'King of the Hill', 'Wonder Race', 'Defend the Wonder',
-    'Turbo Random Map', 'Capture the Relic', 'Sudden Death', 'Fortress',
-    'Empire Wars', 'Battle on Ice', 'Nomad', 'Arabia', 'Arena']);
+  const SKIP = new Set(['Gaia','GAIA','','MP Random','Random','Scenario','Regicide',
+    'King of the Hill','Wonder Race','Defend the Wonder','Turbo Random Map',
+    'Capture the Relic','Sudden Death','Fortress','Empire Wars','Battle on Ice',
+    'Nomad','Arabia','Arena']);
   const names = strings.filter(s =>
     s.length >= 2 && s.length < 40 && !SKIP.has(s) &&
-    !s.startsWith('SUBSCRIBEDMODS') && !s.includes(':') &&
-    !/^[\d.]+$/.test(s)
+    !s.startsWith('SUBSCRIBEDMODS') && !s.includes(':') && !/^[\d.]+$/.test(s)
   );
-
   const seen = new Set();
   const result = [];
   for (const n of names) {
-    if (!seen.has(n)) {
-      seen.add(n);
-      result.push({ name: n, civilization_id: 0 });
-      if (result.length === 2) break;
-    }
+    if (!seen.has(n)) { seen.add(n); result.push({name:n, civilization_id:0}); if (result.length===2) break; }
   }
   return result;
 }
 
-// ── Result builder ────────────────────────────────────────────────────────────
-function buildResult(players, { feudalTimes, feudalPops, castleTimes, buildOrders }) {
+function calcTcIdle(intervals, endMs) {
+  if (!intervals || !intervals.length) return endMs;
+  const sorted = intervals.slice().sort((a,b) => a.start - b.start);
+  let cs = sorted[0].start, ce = sorted[0].end;
+  const merged = [];
+  for (const {start:s, end:e} of sorted.slice(1)) {
+    if (s <= ce) { ce = Math.max(ce, e); }
+    else { merged.push({s:cs,e:ce}); cs=s; ce=e; }
+  }
+  merged.push({s:cs,e:ce});
+  let idle = merged[0].s;
+  for (let i = 1; i < merged.length; i++) idle += merged[i].s - merged[i-1].e;
+  idle += Math.max(0, endMs - merged[merged.length-1].e);
+  return idle;
+}
+
+function buildResult(players, { feudalTimes, feudalPops, castleTimes, buildOrders, tcIdleLogs }) {
   const allPids = [...new Set([
     ...Object.keys(feudalTimes).map(Number),
     ...Object.keys(buildOrders).map(Number),
@@ -919,40 +859,41 @@ function buildResult(players, { feudalTimes, feudalPops, castleTimes, buildOrder
 
   const resultPlayers = allPids.map((pid, idx) => {
     const info = players[idx] || {};
+    const fclick = feudalTimes[pid] ?? null;
+    const tcIdle = calcTcIdle(tcIdleLogs[pid] || [], fclick || 600000);
     return {
       player_number:        pid,
       name:                 info.name || `Player ${pid}`,
       civilization_id:      info.civilization_id || 0,
-      feudal_time_ms:       feudalTimes[pid] ?? null,
-      feudal_time_formatted:feudalTimes[pid] != null ? msToMMSS(feudalTimes[pid]) : null,
+      feudal_click_ms:      fclick,
+      feudal_click_str:     fclick != null ? msToMMSS(fclick) : null,
       feudal_clicked:       pid in feudalTimes,
       feudal_pop:           feudalPops[pid] ?? null,
-      castle_time_ms:       castleTimes[pid] ?? null,
-      castle_time_formatted:castleTimes[pid] != null ? msToMMSS(castleTimes[pid]) : null,
+      castle_click_ms:      castleTimes[pid] ?? null,
+      castle_click_str:     castleTimes[pid] != null ? msToMMSS(castleTimes[pid]) : null,
       castle_clicked:       pid in castleTimes,
+      tc_idle_ms:           tcIdle,
+      tc_idle_str:          msToMMSS(tcIdle),
       build_order:          buildOrders[pid] || [],
     };
   });
 
-  // Add header players with no events
   const pidSet = new Set(allPids);
   players.forEach((p, idx) => {
     const pid = idx + 1;
     if (!pidSet.has(pid)) {
       resultPlayers.push({
-        player_number: pid,
-        name: p.name || `Player ${pid}`,
-        civilization_id: p.civilization_id || 0,
-        feudal_time_ms: null, feudal_time_formatted: null, feudal_clicked: false,
-        castle_time_ms: null, castle_time_formatted: null, castle_clicked: false,
-        build_order: [],
+        player_number:pid, name:p.name||`Player ${pid}`, civilization_id:0,
+        feudal_click_ms:null, feudal_click_str:null, feudal_clicked:false,
+        castle_click_ms:null, castle_click_str:null, castle_clicked:false,
+        tc_idle_ms:0, tc_idle_str:'0:00', build_order:[],
       });
     }
   });
 
-  resultPlayers.sort((a, b) => {
+  resultPlayers.sort((a,b) => {
     if (a.feudal_clicked !== b.feudal_clicked) return a.feudal_clicked ? -1 : 1;
-    return (a.feudal_time_ms || Infinity) - (b.feudal_time_ms || Infinity);
+    return (a.feudal_click_ms||Infinity) - (b.feudal_click_ms||Infinity);
   });
 
   return { players: resultPlayers };
@@ -960,7 +901,7 @@ function buildResult(players, { feudalTimes, feudalPops, castleTimes, buildOrder
 
 function msToMMSS(ms) {
   const s = Math.floor(ms / 1000);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 }
 
 // ── Results rendering ─────────────────────────────────────────────────────────
@@ -969,99 +910,85 @@ function renderResults(data) {
   uploadSection.classList.remove('hidden');
 
   const ps = data.players || [];
-  if (ps.length === 0) {
+  if (!ps.length) {
     showError('No player data found. The file may be corrupt or an unsupported format.');
     return;
   }
 
-  // ── Player summary cards ──
-  playerCards.innerHTML = '';
+  matchMeta.innerHTML = '';
+  playersGrid.innerHTML = '';
+
+  const fastestIdx = ps.findIndex(p => p.feudal_clicked);
+
   ps.forEach((p, idx) => {
-    const isFastest = idx === 0 && p.feudal_clicked;
-    const civName = CIVS[p.civilization_id] || (p.civilization_id ? `Civ #${p.civilization_id}` : '');
-    const card = document.createElement('div');
-    card.className = 'player-card' + (isFastest ? ' fastest' : '');
+    const isFastest = idx === fastestIdx && p.feudal_clicked;
+    const civName   = CIVS[p.civilization_id] || (p.civilization_id ? `Civ #${p.civilization_id}` : '');
 
-    const bClass = isFastest ? 'badge badge-gold' : 'badge badge-dim';
-    const bText  = isFastest ? 'Faster Feudal'
-                 : p.feudal_clicked ? 'Feudal reached'
-                 : 'No Feudal data';
+    const panel = document.createElement('div');
+    panel.className = 'player-panel' + (isFastest ? ' highlight' : '');
 
-    card.innerHTML = `
-      <span class="${bClass}">${bText}</span>
-      <div class="player-name" title="${esc(p.name)}">${esc(p.name)}</div>
-      ${civName ? `<div class="player-civ">${esc(civName)}</div>` : '<div class="player-civ">&nbsp;</div>'}
-      <div class="age-times">
-        <div class="age-time-col">
-          <span class="age-label">Feudal${p.feudal_pop ? ` <span style="font-weight:400;font-size:10px;text-transform:none;letter-spacing:0;color:var(--text-dim)">${esc(p.feudal_pop)} pop</span>` : ''}</span>
-          <div class="age-value ${p.feudal_clicked ? 'has-time' : 'no-time'}">${p.feudal_time_formatted || '—'}</div>
+    const badgeHtml = isFastest
+      ? `<span class="badge badge-gold">⚡ Faster Feudal</span>`
+      : `<span class="badge badge-dim">${p.feudal_clicked ? 'Feudal reached' : 'No feudal data'}</span>`;
+
+    const boHtml = buildOrderHtml(p.build_order || []);
+
+    panel.innerHTML = `
+      <div class="player-header">
+        <div class="player-badge-row">${badgeHtml}</div>
+        <div class="player-name" title="${esc(p.name)}">${esc(p.name)}</div>
+        <div class="player-civ">${esc(civName)}</div>
+      </div>
+      <div class="age-grid">
+        <div class="age-cell">
+          <div class="age-cell-label">Feudal Click</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div class="age-cell-value ${p.feudal_clicked ? 'val-feudal' : 'val-none'}">${p.feudal_click_str || '—'}</div>
+            ${p.feudal_pop ? `<div style="font-size:11px;color:var(--text-dim)">${esc(p.feudal_pop)}</div>` : ''}
+          </div>
         </div>
-        <div class="age-time-col">
-          <span class="age-label">Castle</span>
-          <div class="age-value ${p.castle_clicked ? 'castle' : 'no-time'}">${p.castle_time_formatted || '—'}</div>
+        <div class="age-cell">
+          <div class="age-cell-label">Castle Click</div>
+          <div class="age-cell-value ${p.castle_clicked ? 'val-castle' : 'val-none'}">${p.castle_click_str || '—'}</div>
         </div>
       </div>
-    `;
-    playerCards.appendChild(card);
-  });
-
-  // ── Build order columns ──
-  buildOrdersEl.innerHTML = '';
-  ps.forEach(p => {
-    const col = document.createElement('div');
-    col.className = 'bo-col';
-
-    const bo = p.build_order || [];
-    const unitCount     = bo.filter(e => e.type === 'unit').reduce((s, e) => s + e.amount, 0);
-    const buildingCount = bo.filter(e => e.type === 'building').length;
-    const techCount     = bo.filter(e => e.type === 'tech').length;
-    const metaStr       = bo.length ? `${unitCount}u  ${buildingCount}b  ${techCount}t` : '';
-
-    col.innerHTML = `
-      <div class="bo-col-header">
-        <span>${esc(p.name)}</span>
-        <span class="bo-col-meta">${metaStr}</span>
+      <div class="bo-list">${boHtml}</div>
+      <div class="tc-idle-row">
+        TC idle up to feudal: <span class="tc-idle-val">${esc(p.tc_idle_str || '—')}</span>
       </div>
     `;
 
-    const list = document.createElement('div');
-    list.className = 'bo-list';
-
-    if (bo.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'bo-empty';
-      empty.textContent = p.feudal_clicked
-        ? 'Build order not available (non-DE format)'
-        : 'No build order data found';
-      list.appendChild(empty);
-    } else {
-      for (const ev of bo) {
-        const row = document.createElement('div');
-        row.className = `bo-entry bo-${ev.type}`;
-        const amountStr = ev.amount > 1 ? `<span class="bo-amount">×${ev.amount}</span>` : '';
-        row.innerHTML = `
-          <span class="bo-time">${msToMMSS(ev.time_ms)}</span>
-          <span class="bo-name">${esc(ev.name)}</span>
-          ${amountStr}
-        `;
-        list.appendChild(row);
-      }
-    }
-
-    col.appendChild(list);
-    buildOrdersEl.appendChild(col);
+    playersGrid.appendChild(panel);
   });
 
-  const feudalCount  = ps.filter(p => p.feudal_clicked).length;
-  const castleCount  = ps.filter(p => p.castle_clicked).length;
-  resultMeta.textContent = `${feudalCount}/${ps.length} reached Feudal · ${castleCount}/${ps.length} reached Castle`;
   resultsSection.classList.remove('hidden');
 }
 
+function buildOrderHtml(bo) {
+  if (!bo.length) return '';
+  const header = `<div class="bo-header-row">
+    <span style="text-align:right">Time</span>
+    <span></span>
+    <span>Event</span>
+    <span></span><span></span><span></span><span></span>
+    <span style="text-align:center">Pop</span>
+  </div>`;
+  const rows = bo.map(item => {
+    const t = item.type || 'unit';
+    const pv = item.pop || '';
+    return `<div class="bo-row">
+      <span class="bo-time">${esc(msToMMSS(item.time_ms))}</span>
+      <span class="bo-dot bo-dot-${t}"></span>
+      <span class="bo-name bo-name-${t}">${esc(item.name||'')}${item.amount > 1 ? ` ×${item.amount}` : ''}</span>
+      <span></span><span></span><span></span><span></span>
+      <span class="res-pop">${esc(pv)}</span>
+    </div>`;
+  }).join('');
+  return header + rows;
+}
+
 function esc(s) {
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 showHome();
